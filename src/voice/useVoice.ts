@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import type { VoiceApi } from "../lib/contracts";
 import { speakText } from "./ttsClient";
 import { recordAndTranscribe } from "./sttRecorder";
+import { getTtsEnabled } from "./ttsPreference";
 
 // Caption/listening state is additive on top of VoiceApi (structurally a
 // superset, so it's still assignable to VoiceApi) — this drives on-screen
@@ -23,6 +24,7 @@ export function useVoice(): VoiceApi & VoiceAccessibility {
 
   const speak = useCallback(async (text: string) => {
     setCaption(text);
+    if (!getTtsEnabled()) return;
     setIsSpeaking(true);
     try {
       await speakText(text);

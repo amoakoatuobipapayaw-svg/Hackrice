@@ -100,7 +100,12 @@ function log(message: string): void {
 export type SttPhase = "recording" | "transcribing";
 
 export async function recordAndTranscribe(onPhase?: (phase: SttPhase) => void): Promise<string> {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  // Auto gain control actively works against a volume-threshold VAD — it
+  // continuously renormalizes level, so speech and silence can end up
+  // looking similarly "loud" after processing.
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
+  });
   const recorder = new MediaRecorder(stream);
   const chunks: BlobPart[] = [];
 

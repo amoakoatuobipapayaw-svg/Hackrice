@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { HighContrastToggle } from '../components/ui/HighContrastToggle';
+import { TtsToggle } from '../components/ui/TtsToggle';
 import { NAME } from '../lib/constants';
 
 const LINKS = [
@@ -15,12 +16,12 @@ export function Nav() {
     <div className="flex h-full flex-col p-3 lg:p-4">
       <div className="flex items-center justify-between lg:block">
         <NavLink to="/" className="inline-flex items-center gap-2 px-2 py-3 text-2xl font-extrabold tracking-tight text-brand lowercase lg:mb-6 lg:py-5"><span aria-hidden="true" className="text-3xl">✋</span>{NAME}</NavLink>
-        <div className="lg:hidden"><HighContrastToggle /></div>
+        <div className="flex gap-1 lg:hidden"><TtsToggle /><HighContrastToggle /></div>
       </div>
       <nav aria-label="Main navigation" className="grid grid-cols-5 gap-1 lg:flex lg:flex-col lg:gap-2">
         {LINKS.map(({to,label,icon}) => <NavLink key={to} to={to} end={to === '/'} className={({isActive}) => `flex min-w-0 flex-col items-center gap-1 rounded-xl border-2 px-1 py-2 text-[10px] font-extrabold tracking-wide uppercase lg:flex-row lg:gap-4 lg:px-4 lg:py-3 lg:text-sm ${isActive ? 'border-selected-line bg-selected text-selected-ink' : 'border-transparent text-muted hover:bg-soft'}`}><span aria-hidden="true" className="text-2xl leading-none lg:w-7 lg:text-center">{icon}</span><span>{label}</span></NavLink>)}
       </nav>
-      <div className="mt-auto hidden border-t-2 border-line pt-4 lg:block"><p className="mb-3 px-2 text-xs leading-relaxed text-muted">A little practice.<br />A world of connection.</p><HighContrastToggle /></div>
+      <div className="mt-auto hidden border-t-2 border-line pt-4 lg:block"><p className="mb-3 px-2 text-xs leading-relaxed text-muted">A little practice.<br />A world of connection.</p><div className="flex flex-col gap-2"><TtsToggle /><HighContrastToggle /></div></div>
     </div>
   </header>;
 }
