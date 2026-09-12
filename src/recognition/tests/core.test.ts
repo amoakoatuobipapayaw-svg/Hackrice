@@ -109,6 +109,34 @@ test('aspect ratio correction preserves the same hand geometry', () => {
     assert.equal(classifySign(points.map(p=>({...p,y:p.y*aspect})),{aspectRatio:aspect})?.label,'L');
   }
 });
+test('contact scores vary with geometry and near-misses cannot earn a rep', () => {
+  const scores: number[]=[];
+  for(const gap of [0.05,0.20,0.28]) {
+    const points=hand([false,true,true,true]);
+    const scale=Math.hypot(points[0].x-points[9].x,points[0].y-points[9].y);
+    points[4]={...points[8],z:points[8].z-gap*scale};
+    const result=classifySign(points,{vocabulary:'numbers'});
+    assert.equal(result?.label,'9');
+    scores.push(result!.confidence);
+    if(gap===0.28) {
+      const tracker=createHoldTracker();
+      for(let t=0;t<=2000;t+=100) assert.equal(tracker.update(result,t,{target:'9'}).confirmed,null);
+    }
+  }
+  assert.ok(scores[0]>scores[1] && scores[1]>scores[2]);
+  assert.ok(scores[0]>=0.8 && scores[2]<0.8);
+});
+test('clear supported poses remain confirmable with bounded, nonconstant scores', () => {
+  for(const [points,vocabulary] of [
+    [hand([true,false,false,false],true),'letters'],
+    [hand([false,false,false,true]),'letters'],
+    [hand([true,true,true,true],true),'numbers'],
+  ] as const) {
+    const result=classifySign(points,{vocabulary});
+    assert.ok(result && result.confidence>=0.8 && result.confidence<=1);
+    assert.notEqual(result.confidence,0.85);
+  }
+});
 test('coaching matches the existing API and rejects failures/malformed responses', async () => {
   const original=globalThis.fetch;
   try {

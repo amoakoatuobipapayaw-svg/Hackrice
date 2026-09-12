@@ -85,6 +85,7 @@ function Readout({recognition:r,target}: {recognition:Omit<Recognition, 'videoRe
     </div>
     <p>Status: {r.status} · Guess: <strong>{r.current?.label ?? '—'}</strong>
       {' '}· Rule match: {r.current ? `${Math.round(r.current.confidence*100)}%` : '—'}</p>
+    <p className="text-sm">Rule match measures hand geometry, not recognition accuracy. Borderline poses score lower.</p>
     <label>Hold to confirm <progress className="w-full" value={r.holdProgress} max={1} /></label>
     <p aria-live="polite">{feedback}</p>
     <p aria-live="polite">Confirmed reps: {r.correctReps} · Last confirmed: {r.confirmed?.label ?? '—'}</p>

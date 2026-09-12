@@ -6,6 +6,8 @@ export const MOTION_SIGNS = ['J', 'Z'] as const;
 export const DEMO_LETTERS = ['I', 'L', 'V', 'W', 'Y'] as const;
 export const EXPERIMENTAL_LETTERS = ['A','B','C','D','E','F','G','H','K','M','N','O','P','Q','R','S','T','U','X'] as const;
 const distance = (a: Landmark, b: Landmark) => Math.hypot(a.x-b.x, a.y-b.y, a.z-b.z);
+const ramp = (value: number, low: number, high: number) =>
+  Math.max(0, Math.min(1, (value-low)/(high-low)));
 function angle(a: Landmark, b: Landmark, c: Landmark) {
   const u = [a.x-b.x, a.y-b.y, a.z-b.z];
   const v = [c.x-b.x, c.y-b.y, c.z-b.z];
@@ -21,7 +23,7 @@ function angle(a: Landmark, b: Landmark, c: Landmark) {
 export function classifySign(points: readonly Landmark[], options: {
   vocabulary?: Vocabulary; aspectRatio?: number;
 } = {}): SignResult | null {
-  if (points.length !== 21 || points.some(p => ![p.x,p.y,p.z].every(Number.isFinite))) return null;
+  if (!Array.isArray(points) || points.length !== 21 || points.some(p => !p || ![p.x,p.y,p.z].every(Number.isFinite))) return null;
   const aspect = options.aspectRatio ?? 1;
   if (!Number.isFinite(aspect) || aspect <= 0) return null;
   // MediaPipe x/z use image-width units; convert y to the same metric.
@@ -32,32 +34,51 @@ export function classifySign(points: readonly Landmark[], options: {
   const bases = [5,9,13,17];
   const straight = bases.map(b => angle(p[b],p[b+1],p[b+3]) > 155 &&
     angle(p[b+1],p[b+2],p[b+3]) > 150 && d(b+3,0) > d(b+1,0)*1.08);
+  // Continuous evidence exposes borderline joints instead of treating every
+  // non-straight finger as a confidently folded finger.
+  const extension = bases.map(b => Math.min(
+    ramp(angle(p[b],p[b+1],p[b+3]),125,175),
+    ramp(angle(p[b+1],p[b+2],p[b+3]),120,170),
+    ramp(d(b+3,0)/Math.max(d(b+1,0),0.01),0.95,1.3),
+  ));
   const [index,middle,ring,pinky] = straight;
   const thumbOut = angle(p[2],p[3],p[4]) > 150 && d(4,17) > 1.25 && d(4,5) > 0.65;
-  const match = (label: string, confidence = 0.65): SignResult => ({label, confidence});
+  const thumbEvidence = Math.min(ramp(angle(p[2],p[3],p[4]),120,170),
+    ramp(d(4,17),0.9,1.5),ramp(d(4,5),0.35,0.85));
+  const match = (label: string, cap = 0.65, extra: number[] = [], touching?: number): SignResult => {
+    const evidence = extension.flatMap((value,i) => i === touching ? [] : [straight[i] ? value : 1-value]);
+    if (['1','2','3','4','5','I','Y','L','V','W'].includes(label)) {
+      evidence.push(thumbOut ? thumbEvidence : 1-thumbEvidence);
+    }
+    const weakest = Math.min(...evidence,...extra);
+    // This remains an uncalibrated geometric match, never an accuracy estimate.
+    return {label,confidence:Math.min(cap,0.45+0.53*weakest)};
+  };
+  const contactEvidence = (finger: number) => 1-ramp(d(4,8+finger*4),0.12,0.40);
   const contact = [8,12,16,20].map(tip => d(4,tip) < 0.30);
   const rounded = !straight.some(Boolean) && bases.every(b => angle(p[b],p[b+1],p[b+3]) > 65);
   if (options.vocabulary === 'numbers') {
-    if (contact[3] && index && middle && ring) return match('6',0.85);
-    if (contact[2] && index && middle && pinky) return match('7',0.85);
-    if (contact[1] && index && ring && pinky) return match('8',0.85);
-    if (contact[0] && middle && ring && pinky) return match('9',0.85);
+    if (contact[3] && index && middle && ring) return match('6',0.98,[contactEvidence(3)],3);
+    if (contact[2] && index && middle && pinky) return match('7',0.98,[contactEvidence(2)],2);
+    if (contact[1] && index && ring && pinky) return match('8',0.98,[contactEvidence(1)],1);
+    if (contact[0] && middle && ring && pinky) return match('9',0.98,[contactEvidence(0)],0);
     if (rounded && contact[0]) return match('0',0.65);
-    if (index && middle && ring && pinky) return match(thumbOut ? '5' : '4',0.85);
-    if (index && middle && !ring && !pinky) return match(thumbOut ? '3' : '2',0.85);
-    if (index && !middle && !ring && !pinky && !thumbOut) return match('1',0.85);
+    if (index && middle && ring && pinky) return match(thumbOut ? '5' : '4',0.98);
+    if (index && middle && !ring && !pinky) return match(thumbOut ? '3' : '2',0.98);
+    if (index && !middle && !ring && !pinky && !thumbOut) return match('1',0.98);
     return null;
   }
   if (contact[0] && middle && ring && pinky) return match('F');
-  if (!index && !middle && !ring && pinky) return match(thumbOut ? 'Y' : 'I',0.85);
-  if (index && middle && ring && !pinky && !thumbOut) return match('W',0.85);
+  if (!index && !middle && !ring && pinky) return match(thumbOut ? 'Y' : 'I',0.98);
+  if (index && middle && ring && !pinky && !thumbOut) return match('W',0.98);
   if (index && middle && ring && pinky && !thumbOut &&
       d(8,12) < 0.4 && d(12,16) < 0.4 && d(16,20) < 0.4) return match('B');
   const dx = p[8].x-p[5].x, dy = p[8].y-p[5].y;
   const horizontal = Math.abs(dx) > Math.abs(dy)*1.5;
   const downward = dy > Math.abs(dx)*0.7;
   if (index && !middle && !ring && !pinky) {
-    if (thumbOut) return match(downward ? 'Q' : horizontal ? 'G' : 'L', !horizontal && !downward ? 0.85 : 0.6);
+    if (thumbOut) return match(downward ? 'Q' : horizontal ? 'G' : 'L', !horizontal && !downward ? 0.98 : 0.6,
+      !horizontal && !downward ? [ramp(-dy/(Math.abs(dx)+Math.abs(dy)+1e-8),0.35,0.85)] : []);
     if (contact[1]) return match('D');
     return null; // Index-only shape is ambiguous without more thumb evidence.
   }
@@ -67,7 +88,8 @@ export function classifySign(points: readonly Landmark[], options: {
     if (horizontal) return match('H');
     const tipDelta = p[8].x-p[12].x, baseDelta = p[5].x-p[9].x;
     if (tipDelta*baseDelta < 0) return match('R',0.55);
-    return match(d(8,12) > 0.4 ? 'V' : 'U',d(8,12) > 0.4 ? 0.85 : 0.65);
+    return match(d(8,12) > 0.4 ? 'V' : 'U',d(8,12) > 0.4 ? 0.98 : 0.65,
+      d(8,12) > 0.4 ? [ramp(d(8,12),0.32,0.65)] : []);
   }
   if (rounded) {
     if (contact[0]) return match('O');

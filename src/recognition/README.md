@@ -77,6 +77,11 @@ There are prototype static rules for A–I, K–Y and digits 0–9. Letter rules
 I/L/V/W/Y and the zero rule return deliberately lower scores, so they do not confirm
 at the default threshold. This is an initial heuristic baseline, not validated accuracy.
 `confidence` is a heuristic match score, not a calibrated probability.
+It now varies with joint straightness, thumb placement, contact distance and
+finger separation instead of returning a fixed 85%. The weakest required feature
+limits the score; near-threshold contact or ambiguous fingers cannot earn a rep
+just because they barely pass the label rule. Clear matches can reach 98%, which
+is still a geometric score and does not mean 98% measured accuracy.
 
 The letter/number vocabulary separates overlapping shapes (for example V versus 2).
 The desired target never forces the classifier's answer. The thumb and occlusion
@@ -122,7 +127,8 @@ npm run lint
 The tests use the existing TypeScript dependency and Node's built-in test runner.
 They check hold timing/release, tracking loss, target changes, basic geometric
 invariance, vocabulary separation, digits 1–9, thumb-related V/W false positives,
-video aspect ratio, invalid landmarks and the coaching API contract (11 tests).
+video aspect ratio, invalid landmarks, varying contact scores, rejection of
+near-miss reps and the coaching API contract (13 tests).
 
 Setup note for D: with npm 12, the incoming lockfile failed `npm ci` because two
 `@emnapi` entries were missing. This session used `npm install --package-lock=false`
