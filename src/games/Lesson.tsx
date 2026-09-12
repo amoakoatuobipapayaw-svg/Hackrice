@@ -77,7 +77,9 @@ export function Lesson() {
         progressLabel="Ready when you are"
       >
         <div className="rounded-2xl border border-line bg-surface p-8 text-center sm:p-14">
-          <span aria-hidden="true" className="text-5xl">✋</span>
+          <span aria-hidden="true" className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-soft text-brand">
+            <Icon name="hand" size={32} />
+          </span>
           <h2 className="mt-5 text-2xl font-bold">Take a moment to get ready.</h2>
           <p className="mx-auto mt-3 max-w-md leading-relaxed text-muted">
             Once you start, we'll speak each prompt aloud and turn on your camera. Find good

@@ -11,7 +11,7 @@ export function GameLayout({ mode, title, description, progress, progressLabel, 
 
     </div>
     <header className="mb-7">
-      <p className="text-xs font-extrabold tracking-widest text-brand uppercase">{mode}</p>
+      <p className="inline-flex items-center gap-2 text-xs font-extrabold tracking-widest text-brand uppercase"><span aria-hidden="true" className="h-2 w-2 rounded-full bg-accent" />{mode}</p>
       <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">{title}</h1>
       <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">{description}</p>
       <div className="mt-6 flex items-center gap-4">
@@ -22,7 +22,7 @@ export function GameLayout({ mode, title, description, progress, progressLabel, 
       </div>
     </header>
     {children}
-    <p className="mt-7 text-center text-xs leading-relaxed text-muted">Practice at your own pace.</p>
+    <p className="mt-7 text-center text-xs leading-relaxed text-muted">No timers on your learning. Practice at your own pace.</p>
   </div>;
 }
 

@@ -1,8 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import { HighContrastToggle } from '../components/ui/HighContrastToggle';
 import { Icon, type IconName } from '../components/ui/Icon';
+import { Logo } from '../components/ui/Logo';
 import { TtsToggle } from '../components/ui/TtsToggle';
-import { NAME } from '../lib/constants';
 
 const LINKS: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/', label: 'Learn', icon: 'home' },
@@ -16,10 +16,7 @@ export function Nav() {
   return <header className="border-b-2 border-line bg-surface lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:w-60 lg:border-r-2 lg:border-b-0">
     <div className="flex h-full flex-col p-3 lg:p-4">
       <div className="flex items-center justify-between lg:block">
-        <NavLink to="/" className="inline-flex items-center gap-2.5 rounded-xl px-2 py-3 text-2xl font-black tracking-tight text-brand lowercase lg:mb-6 lg:py-4">
-          <span aria-hidden="true" className="flex h-9 w-9 items-center justify-center rounded-xl border-b-4 border-brand-hover bg-brand text-white"><Icon name="hand" size={20} /></span>
-          {NAME}
-        </NavLink>
+        <NavLink to="/" className="inline-flex rounded-xl px-2 py-3 lg:mb-6 lg:py-4" aria-label="Home"><Logo /></NavLink>
         <div className="flex gap-1 lg:hidden"><TtsToggle /><HighContrastToggle /></div>
       </div>
       <nav aria-label="Main navigation" className="grid grid-cols-5 gap-1 lg:flex lg:flex-col lg:gap-1.5">

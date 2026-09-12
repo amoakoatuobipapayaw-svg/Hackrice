@@ -3,7 +3,6 @@
 // recognition/useSignRecognition() (numbers vocabulary) for the sign path;
 // recognition owns hold-to-confirm internally.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button } from "../components/ui/Button";
 import { Caption } from "../voice/Caption";
 import { MicButton } from "../voice/MicButton";
 import { useVoice } from "../voice/useVoice";
@@ -18,7 +17,6 @@ import { RoundComplete } from "./RoundComplete";
 
 export function MathMode() {
   const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
-  const [started, setStarted] = useState(false);
   const [problemIndex, setProblemIndex] = useState(0);
   const [problem, setProblem] = useState(generateMathProblem);
   const [correct, setCorrect] = useState(0);
@@ -35,9 +33,9 @@ export function MathMode() {
   });
 
   useEffect(() => {
-    if (!started || result) return;
+    if (result) return;
     voiceRef.current.speak(`What is ${problem.prompt}?`).catch(() => {});
-  }, [started, problem, result]);
+  }, [problem, result]);
 
   const advance = useCallback(
     (wasCorrect: boolean) => {
@@ -55,7 +53,7 @@ export function MathMode() {
   );
 
   const recognition = useSignRecognition({
-    target: started && !result ? String(problem.answer) : undefined,
+    target: result ? undefined : String(problem.answer),
     vocabulary: "numbers",
     onConfirm: () => advance(true),
   });
@@ -78,30 +76,6 @@ export function MathMode() {
 
   if (!profile) return <ProfileGate />;
 
-  if (!started) {
-    return (
-      <GameLayout
-        mode="Math lab"
-        title="Solve and sign."
-        description="Solve a little puzzle, then answer with your hand or your voice. Every answer is a number from 1 to 9."
-        progress={0}
-        progressLabel="Ready when you are"
-      >
-        <div className="rounded-2xl border border-line bg-surface p-8 text-center sm:p-14">
-          <span aria-hidden="true" className="text-5xl">➕</span>
-          <h2 className="mt-5 text-2xl font-bold">Take a moment to get ready.</h2>
-          <p className="mx-auto mt-3 max-w-md leading-relaxed text-muted">
-            Once you start, we'll read each puzzle aloud and turn on your camera. Have your hand
-            or your voice ready to answer.
-          </p>
-          <Button className="mt-7" onClick={() => setStarted(true)}>
-            Start puzzles
-          </Button>
-        </div>
-      </GameLayout>
-    );
-  }
-
   if (result) {
     return (
       <div className="px-4 py-16">
@@ -110,7 +84,6 @@ export function MathMode() {
           profile={profile}
           onRetry={() => {
             recognition.reset();
-            setStarted(false);
             setProblemIndex(0);
             setProblem(generateMathProblem());
             setCorrect(0);

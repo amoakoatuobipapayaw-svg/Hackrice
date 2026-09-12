@@ -24,7 +24,7 @@ export function TtsToggle() {
       className="flex items-center justify-start gap-2 px-2.5 py-2 text-xs tracking-normal whitespace-nowrap"
     >
       <Icon name={enabled ? "volume" : "volumeOff"} size={16} />
-      <span className="sr-only sm:not-sr-only">{enabled ? "Voice: on" : "Voice: off"}</span>
+      <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">{enabled ? "Voice: on" : "Voice: off"}</span>
     </Button>
   );
 }

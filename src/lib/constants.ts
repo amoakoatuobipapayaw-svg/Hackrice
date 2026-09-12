@@ -2,5 +2,4 @@
 // of hardcoding the string, so a rename is a one-line change.
 export const NAME = "Signly";
 
-export const TAGLINE =
-  "Sign to your webcam. Get scored, coached, and heard.";
+export const TAGLINE = "Say it with your hands.";
