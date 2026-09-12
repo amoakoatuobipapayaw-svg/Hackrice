@@ -38,7 +38,7 @@ export function Onboarding() {
           </Button>
         </form>
       </Card>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-slate-400">
         You can verify your identity later to post scores to the public
         leaderboard.
       </p>

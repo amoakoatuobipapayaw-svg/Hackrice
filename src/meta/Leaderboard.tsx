@@ -42,11 +42,11 @@ export function Leaderboard() {
         )}
         {entries.map((entry, i) => (
           <div key={entry.userId} className="flex items-center gap-4 p-4">
-            <span className="w-6 text-center font-mono text-slate-500">{i + 1}</span>
+            <span className="w-6 text-center font-mono text-slate-400">{i + 1}</span>
             <span className="flex-1 truncate font-medium">
               {entry.name}
               {entry.verified && (
-                <span title="Verified human" className="ml-1 text-violet-400">
+                <span className="ml-1 text-violet-400" aria-label="Verified human" title="Verified human">
                   ✓
                 </span>
               )}
