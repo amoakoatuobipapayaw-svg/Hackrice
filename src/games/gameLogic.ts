@@ -3,7 +3,7 @@
 // streak, and (if verified) the leaderboard, so that logic isn't
 // duplicated three times.
 import type { GameMode, RoundResult, UserProfile } from "../lib/contracts";
-import { bumpStreak, postScore } from "../lib/supabase";
+import { bumpStreak, postScore, syncProfile } from "../lib/supabase";
 import { saveLocalProfile } from "../lib/localProfile";
 import { levelForXp } from "../meta/StreakXp";
 
@@ -22,23 +22,33 @@ export function scoreRound(mode: GameMode, correct: number, total: number, score
   return { mode, score: score ?? correct * 10, correct, total, xp: correct * 5 };
 }
 
-/** Awards a finished round's XP, bumps the daily streak, saves the profile
- * locally, and (once verified) pushes the new total to the leaderboard. */
+/**
+ * Awards a finished round's XP and saves the profile locally. Guests (not
+ * Persona-verified — see meta/PersonaGate.tsx) only get that local
+ * feedback: no streak, no server persistence, not leaderboard-eligible.
+ * Verified accounts additionally bump the real streak, sync XP/level to
+ * Supabase, and post to the leaderboard.
+ */
 export async function completeRound(profile: UserProfile, result: RoundResult): Promise<UserProfile> {
   const xp = profile.xp + result.xp;
+
+  if (!profile.verified) {
+    const updated: UserProfile = { ...profile, xp, level: levelForXp(xp) };
+    saveLocalProfile(updated);
+    return updated;
+  }
+
   const streak = await bumpStreak(profile.id);
   const updated: UserProfile = { ...profile, xp, streak, level: levelForXp(xp) };
   saveLocalProfile(updated);
-
-  if (updated.verified) {
-    await postScore({
-      userId: updated.id,
-      name: updated.name,
-      xp: updated.xp,
-      verified: updated.verified,
-      updatedAt: new Date().toISOString(),
-    });
-  }
+  await syncProfile(updated);
+  await postScore({
+    userId: updated.id,
+    name: updated.name,
+    xp: updated.xp,
+    verified: updated.verified,
+    updatedAt: new Date().toISOString(),
+  });
 
   return updated;
 }
