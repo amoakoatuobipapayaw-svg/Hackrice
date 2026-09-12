@@ -93,13 +93,24 @@ function waitForSilence(stream: MediaStream): Promise<void> {
   });
 }
 
-export async function recordAndTranscribe(): Promise<string> {
+/** Fires as recordAndTranscribe() moves through each phase, so the UI can
+ * show "Listening" vs "Transcribing" instead of one frozen state — and so
+ * we can see, from real timing, where time is actually going. */
+export type SttPhase = "recording" | "transcribing";
+
+export async function recordAndTranscribe(onPhase?: (phase: SttPhase) => void): Promise<string> {
+  const t0 = performance.now();
+  const log = (label: string) => console.debug(`[stt] ${label} at +${Math.round(performance.now() - t0)}ms`);
+
   // Auto gain control actively works against a volume-threshold VAD — it
   // continuously renormalizes level, so speech and silence can end up
   // looking similarly "loud" after processing.
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
   });
+  log("mic acquired");
+  onPhase?.("recording");
+
   const recorder = new MediaRecorder(stream);
   const chunks: BlobPart[] = [];
 
@@ -110,21 +121,27 @@ export async function recordAndTranscribe(): Promise<string> {
 
   recorder.start();
   await waitForSilence(stream);
+  log("silence detected, stopping recorder");
   recorder.stop();
   stream.getTracks().forEach((track) => track.stop());
 
   const audioBlob = await recorded;
+  log(`recorder flushed, blob size ${audioBlob.size}B`);
   const audioBase64 = await blobToBase64(audioBlob);
+  log("base64-encoded, sending to /api/stt");
+  onPhase?.("transcribing");
 
   const res = await fetch("/api/stt", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ audioBase64, mimeType: audioBlob.type || "audio/webm" }),
   });
+  log(`/api/stt responded (${res.status})`);
   if (!res.ok) {
     throw new Error(`stt request failed: ${res.status}`);
   }
 
   const data = (await res.json()) as { transcript: string };
+  log(`transcript: "${data.transcript}" — total`);
   return data.transcript;
 }

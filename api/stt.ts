@@ -16,7 +16,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const audioBuffer = Buffer.from(audioBase64, "base64");
   const form = new FormData();
-  form.append("model_id", "scribe_v1");
+  // scribe_v1 is deprecated; scribe_v2 is the current batch model (same
+  // request/response shape). Answers here are always English digits, so
+  // skip language auto-detection.
+  form.append("model_id", "scribe_v2");
+  form.append("language_code", "en");
   form.append("file", new Blob([audioBuffer], { type: mimeType }), "audio");
 
   const elevenRes = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {

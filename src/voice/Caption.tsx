@@ -8,8 +8,8 @@ type CaptionProps = VoiceAccessibility & {
   isSpeaking: boolean;
 };
 
-export function Caption({ caption, isSpeaking, isListening }: CaptionProps) {
-  if (!caption && !isListening) return null;
+export function Caption({ caption, isSpeaking, isListening, isTranscribing }: CaptionProps) {
+  if (!caption && !isListening && !isTranscribing) return null;
 
   return (
     <div
@@ -17,7 +17,7 @@ export function Caption({ caption, isSpeaking, isListening }: CaptionProps) {
       aria-live="polite"
       className="rounded-lg border border-line bg-surface px-4 py-3 text-lg font-medium text-ink"
     >
-      {isListening ? "Listening…" : caption}
+      {isListening ? "Listening…" : isTranscribing ? "Reading that back…" : caption}
       {isSpeaking && caption ? <span className="sr-only"> (speaking)</span> : null}
     </div>
   );

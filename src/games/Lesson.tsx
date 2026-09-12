@@ -81,6 +81,6 @@ export function Lesson() {
       <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-soft text-xl text-brand">✦</span>
       <div><h2 className="text-sm font-bold text-brand">Practice tip</h2><p role="status" className="mt-1 text-sm leading-relaxed text-muted">{recognition.coachingLine ?? 'Keep your wrist relaxed and your whole hand visible. There’s no timer here—take your time.'}</p><p className="mt-2 text-xs text-muted">AI coaching uses a hand-landmark summary while you practice.</p></div>
     </aside>
-    <div className="mt-4"><Caption caption={voice.caption} isSpeaking={voice.isSpeaking} isListening={voice.isListening} /></div>
+    <div className="mt-4"><Caption caption={voice.caption} isSpeaking={voice.isSpeaking} isListening={voice.isListening} isTranscribing={voice.isTranscribing} /></div>
   </GameLayout>;
 }
