@@ -12,11 +12,13 @@ import { recordAndTranscribe } from "./sttRecorder";
 export type VoiceAccessibility = {
   caption: string | null;
   isListening: boolean;
+  isTranscribing: boolean;
 };
 
 export function useVoice(): VoiceApi & VoiceAccessibility {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [caption, setCaption] = useState<string | null>(null);
 
   const speak = useCallback(async (text: string) => {
@@ -32,13 +34,17 @@ export function useVoice(): VoiceApi & VoiceAccessibility {
   const listen = useCallback(async () => {
     setIsListening(true);
     try {
-      const transcript = await recordAndTranscribe();
+      const transcript = await recordAndTranscribe((phase) => {
+        setIsListening(phase === "recording");
+        setIsTranscribing(phase === "transcribing");
+      });
       setCaption(transcript);
       return transcript;
     } finally {
       setIsListening(false);
+      setIsTranscribing(false);
     }
   }, []);
 
-  return { speak, listen, isSpeaking, isListening, caption };
+  return { speak, listen, isSpeaking, isListening, isTranscribing, caption };
 }
