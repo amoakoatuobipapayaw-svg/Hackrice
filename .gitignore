@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Hackathon handbook / non-code docs — not part of the app
+*.docx
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

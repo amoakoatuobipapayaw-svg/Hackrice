@@ -5,6 +5,9 @@
 ## What we are building (one sentence)
 SignQuest is a Duolingo-style web game that teaches American Sign Language: you sign to your webcam, the app scores your hand shape and coaches you, and it can speak your signs out loud, all wrapped in streaks, XP, and a bot-free leaderboard.
 
+## Status
+Phase 0 scaffolding (D) is done and on `main`: `contracts.ts`, the Vite/React/TS/Tailwind app shell with routing, `src/lib/supabase.ts`, the `/api` proxies, and real-but-stub files + mocks in `recognition/`, `games/`, `voice/`, `meta/`. `npm run dev` and `npm run build` both work with zero env vars set. A/B/C: pull `main`, `npm install`, and start replacing the stub internals in your folder — see PLAN.md for what's next.
+
 ## The one demo that has to work
 Sit in front of the webcam, a prompt says "sign THANK YOU", you sign it, the app recognizes it, scores you, gives one line of AI coaching, and ElevenLabs speaks "thank you" aloud. Then your score posts to a leaderboard next to your verified name. Everything else is support for that moment. When in doubt, protect this loop.
 
@@ -46,6 +49,7 @@ signquest/
       useSignRecognition.ts
       handLandmarker.ts
       signClassifier.ts
+      geminiCoach.ts
       mock.ts              # A provides a fake recognizer so B can build before A is done
     voice/                 # (C) ElevenLabs TTS + STT
       useVoice.ts
@@ -74,6 +78,8 @@ signquest/
 - Branch per workstream: `feat/recognition`, `feat/voice`, `feat/games`, `feat/meta`.
 - Small, frequent PRs. Anyone can merge after a quick look, but never merge something that breaks `npm run dev`.
 - Never commit secrets. Keys live in `.env.local` (git-ignored) and in Vercel env vars.
+- Commits and pushes run as the human driving the session, full stop. Claude Code must never add itself (or any AI) as an author or co-author on a commit — no `Co-Authored-By` trailer, no separate identity, nothing that would list an AI as a contributor on the GitHub repo. If your Claude Code setup normally appends that trailer, drop it for this repo.
+- Don't commit non-code hackathon docs (handbooks, slide decks, etc.) — see `.gitignore`.
 
 ## Secrets (put in .env.local, never commit)
 ```

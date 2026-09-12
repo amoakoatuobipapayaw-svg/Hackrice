@@ -3,6 +3,8 @@
 Team of 4, all coding through Claude Code from separate accounts. Web app first.
 Clock: hacking ends **Sunday 9:00 AM**, Devpost submission (with a 3-4 minute video) due **Sunday 8:45 AM**. It is Friday ~11 PM now. Sleep is allowed and encouraged; rotate.
 
+**Status: Phase 0 is done on `main`.** D's scaffold (contracts.ts, app shell, Supabase helpers, /api proxies, meta components, and stub+mock files in recognition/games/voice) is committed to `main` locally, ready to push. `npm run dev` and `npm run build` work with no env vars set. Still open from D's list: real Supabase project + keys, Persona template ID, Vercel deploy, Solana stretch. A/B/C: pull `main` and start replacing stub internals in your folder.
+
 ## The four workstreams
 
 Assign one person to each. The most technically comfortable person should take **A (Recognition)**, it is the hardest and the riskiest. Nerez, that is probably you.
@@ -14,7 +16,7 @@ Owns `src/recognition/` and the Gemini coaching call.
 - Build `signClassifier.ts`: given hand landmarks, return the best-guess letter/number. Start rule-based on finger states (which fingers are extended, thumb position) for A-Z and 0-9. This is enough for the MVP.
 - Build `useSignRecognition()` hook that streams `{ label, confidence }` and a "hold to confirm" scoring rule (label stable for ~1 second = a correct rep).
 - Build `geminiCoach()`: every few seconds, send a frame or the landmark summary to `/api/coach` and return one short coaching line.
-- Ship `recognition/mock.ts` in the first 2 hours so B can build against it immediately.
+- `recognition/mock.ts` and stub `useSignRecognition.ts`/`handLandmarker.ts`/`signClassifier.ts`/`geminiCoach.ts` already exist (D scaffolded them) — build the real internals in place, keep the `SignRecognition` shape from `contracts.ts`.
 
 ### B — Game modes and gameplay UI
 Owns `src/games/`. Builds against A's and C's mocks until integration.
@@ -22,6 +24,7 @@ Owns `src/games/`. Builds against A's and C's mocks until integration.
 - **Speed Challenge**: a timed run of signs, points for speed and accuracy, combo multiplier.
 - **Math mode**: generate a math problem, accept the answer two ways: sign the number in ASL, or speak it (calls C's voice STT). Correct/incorrect feedback, timer, score.
 - `gameLogic.ts`: scoring, streak-within-a-round, XP awarded. Return results in the `RoundResult` shape from contracts.
+- `Lesson.tsx`, `SpeedChallenge.tsx`, `MathMode.tsx` exist as stub pages already routed in `src/app/App.tsx` — build out the real UI in place.
 
 ### C — Voice and accessibility (ElevenLabs)
 Owns `src/voice/`.
@@ -29,19 +32,19 @@ Owns `src/voice/`.
 - `listen()`: capture mic audio, send to `/api/stt`, return the transcript. Used by Math mode voice answers.
 - `useVoice()` hook exposing `speak`, `listen`, and `isSpeaking`.
 - Accessibility pass: captions for all audio, keyboard navigation, large tap targets, high-contrast mode. This is our impact story, own it proudly.
-- Ship `voice/mock.ts` early (speak = console.log, listen = returns a fixed string).
+- `voice/mock.ts` and stub `useVoice.ts` already exist (D scaffolded them) — build the real `/api/tts` + `/api/stt` calls in place, keep the `VoiceApi` shape from `contracts.ts`.
 
 ### D — Shell, meta, backend, sponsors
 Owns `src/lib/`, `src/meta/`, `src/app/`, and `/api`.
-- **First job, hour one**: write `src/lib/contracts.ts` and merge to `main`. Nothing else starts cleanly until this exists.
-- Scaffold the Vite + React + TS + Tailwind app, routing, Home, Nav, onboarding screen.
-- Supabase: schema for `profiles`, `scores` (leaderboard), `streaks`. Write `supabase.ts` query helpers.
-- Serverless proxies in `/api`: `coach.ts` (Gemini), `tts.ts` and `stt.ts` (ElevenLabs). Keys server-side.
-- **Persona gate**: user verifies once (sandbox) before posting to the leaderboard. Store a `verified` flag.
-- Streaks and XP: daily streak counter, XP bar, level.
-- Leaderboard UI with realtime updates.
-- **Solana badge (stretch)**: `solanaBadge.ts`, mint a devnet achievement when a user hits a streak milestone. Only after everything else works.
-- Deploy to Vercel early so there is always a live URL.
+- [x] **First job, hour one**: write `src/lib/contracts.ts` and merge to `main`. Nothing else starts cleanly until this exists.
+- [x] Scaffold the Vite + React + TS + Tailwind app, routing, Home, Nav, onboarding screen.
+- [x] `supabase.ts` query helpers (`getLeaderboard`, `postScore`, `getProfile`, `bumpStreak`), with mock fallback until a real project exists. **TODO:** create the actual Supabase project + `profiles`/`scores`/`streaks` tables (schema is documented at the top of `supabase.ts`) and drop the URL/anon key into `.env.local`.
+- [x] Serverless proxies in `/api`: `coach.ts` (Gemini), `tts.ts` and `stt.ts` (ElevenLabs). Keys server-side, read from `process.env`. **TODO:** set `GEMINI_API_KEY` / `ELEVENLABS_API_KEY` in Vercel.
+- [x] **Persona gate**: `PersonaGate.tsx` loads the sandbox SDK and flips a local `verified` flag. **TODO:** get a real `VITE_PERSONA_TEMPLATE_ID` and wire `verified` through to the leaderboard once Supabase is live.
+- [x] Streaks and XP: `StreakXp.tsx` (badge + level bar), `bumpStreak()` in `supabase.ts`.
+- [x] Leaderboard UI (`meta/Leaderboard.tsx`) with realtime subscription, currently rendering mock rows until Supabase is live.
+- [ ] **Solana badge (stretch)**: `solanaBadge.ts`, mint a devnet achievement when a user hits a streak milestone. Only after everything else works.
+- [ ] Deploy to Vercel early so there is always a live URL. **Not done yet — do this next.**
 
 ## Shared interfaces (these go in src/lib/contracts.ts, D writes them first)
 Everyone codes to these. Exact names matter so imports line up.
@@ -63,7 +66,7 @@ export interface VoiceApi { speak(t: string): Promise<void>; listen(): Promise<s
 ```
 
 ## Timeline (anchored to the real clock, sleep built in)
-- **Fri 11:00 PM to Sat 1:00 AM — Phase 0, Setup (all together).** D scaffolds the app and merges `contracts.ts`. A gets webcam + landmarks drawing on screen (proves the riskiest part on night one). B, C, D each stub their folder with a mock. Everyone can run `npm run dev`. Deploy the empty shell to Vercel.
+- **Fri 11:00 PM to Sat 1:00 AM — Phase 0, Setup (all together).** ✅ D scaffolded the app and merged `contracts.ts`, plus stub files + mocks for `recognition/`, `games/`, `voice/` so `npm run dev` already works for everyone. Still open: A gets webcam + landmarks drawing on screen (proves the riskiest part on night one), and deploy the shell to Vercel.
 - **Sat 1:00 AM to Sat 10:00 AM — Phase 1, Parallel core (rotate sleep).** Each workstream builds its core against mocks. Target by end of phase: A recognizes letters and numbers; B has Lesson mode playable with mock recognition; C has speak and listen working; D has leaderboard, streaks, Persona gate, and the /api proxies live.
 - **Sat 10:00 AM to Sat 4:00 PM — Phase 2, Integration.** Replace mocks with real modules one at a time. Get the full loop working end to end: pick a lesson, sign to camera, real score, real coaching line, ElevenLabs speaks it, XP posts to the real leaderboard. Then wire Math mode with both sign and voice answers.
 - **Sat 4:00 PM to Sat 10:00 PM — Phase 3, Polish + sponsors.** Gemini coaching quality pass, animations, sound, empty and error states, mobile-responsive layout, high-contrast and captions. If ahead: Solana devnet badge.
