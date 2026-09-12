@@ -4,11 +4,11 @@ type Variant = "primary" | "secondary" | "ghost";
 
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary:
-    "bg-violet-500 text-white hover:bg-violet-400 focus-visible:outline-violet-300",
+    "bg-brand text-white hover:bg-brand-hover focus-visible:outline-brand",
   secondary:
-    "bg-slate-800 text-slate-100 hover:bg-slate-700 focus-visible:outline-slate-400",
+    "bg-soft text-ink hover:bg-line focus-visible:outline-brand",
   ghost:
-    "bg-transparent text-slate-200 hover:bg-slate-800 focus-visible:outline-slate-400",
+    "bg-transparent text-ink hover:bg-soft focus-visible:outline-brand",
 };
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {

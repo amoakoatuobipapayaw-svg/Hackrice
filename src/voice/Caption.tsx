@@ -15,7 +15,7 @@ export function Caption({ caption, isSpeaking, isListening }: CaptionProps) {
     <div
       role="status"
       aria-live="polite"
-      className="rounded-lg border border-slate-700 bg-slate-900/90 px-4 py-3 text-lg font-medium text-white shadow-lg"
+      className="rounded-lg border border-line bg-surface px-4 py-3 text-lg font-medium text-ink"
     >
       {isListening ? "Listening…" : caption}
       {isSpeaking && caption ? <span className="sr-only"> (speaking)</span> : null}

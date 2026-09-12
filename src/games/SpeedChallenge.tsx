@@ -80,12 +80,12 @@ export function SpeedChallenge() {
     );
   }
 
-  return <GameLayout mode="Speed session" title="Find your signing rhythm." description="Thirty seconds of focused practice. Your timer only runs while the camera is ready. Pause whenever you need." progress={timeLeft / SPEED_CHALLENGE_SECONDS} progressLabel={`${timeLeft}s remaining`}>
-    <div className="mb-5 grid grid-cols-3 gap-3">{[['Score', score], ['Signs confirmed', matches], ['Combo', comboStreak]].map(([label, value]) => <div key={label} className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center"><p className="text-xs font-semibold text-slate-300">{label}</p><p className="mt-2 text-2xl font-black text-emerald-300">{value}</p></div>)}</div>
+  return <GameLayout mode="Speed session" title="30-second practice." description="Thirty seconds of focused practice. Your timer only runs while the camera is ready. Pause whenever you need." progress={timeLeft / SPEED_CHALLENGE_SECONDS} progressLabel={`${timeLeft}s remaining`}>
+    <div className="mb-5 grid grid-cols-3 gap-3">{[['Score', score], ['Signs confirmed', matches], ['Combo', comboStreak]].map(([label, value]) => <div key={label} className="rounded-2xl border border-line bg-surface p-4 text-center"><p className="text-xs font-semibold text-muted">{label}</p><p className="mt-2 text-2xl font-bold text-brand">{value}</p></div>)}</div>
     <div className="grid gap-5 md:grid-cols-2">
       <SignGuide target={target} />
       <CameraPanel recognition={recognition} target={target} startLabel={started ? 'Resume session' : 'Start 30-second session'} onStart={() => { setStarted(true); recognition.start(); }} />
     </div>
-    <p className="mt-5 rounded-2xl border border-slate-700 bg-slate-900 p-5 text-sm leading-relaxed text-slate-300">✦ Build a run of confirmed signs to earn more points per sign. Every confirmed sign earns 5 XP.</p>
+    <p className="mt-5 rounded-2xl border border-line bg-surface p-5 text-sm leading-relaxed text-muted">✦ Build a run of confirmed signs to earn more points per sign. Every confirmed sign earns 5 XP.</p>
   </GameLayout>;
 }

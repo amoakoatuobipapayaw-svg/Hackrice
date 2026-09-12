@@ -36,22 +36,22 @@ export function Leaderboard() {
     <div className="mx-auto max-w-2xl px-4 py-12">
       <h1 className="mb-6 text-2xl font-bold">Leaderboard</h1>
       <Card className="divide-y divide-slate-800 p-0">
-        {loading && <p className="p-6 text-center text-slate-400">Loading…</p>}
+        {loading && <p className="p-6 text-center text-muted">Loading…</p>}
         {!loading && entries.length === 0 && (
-          <p className="p-6 text-center text-slate-400">No scores yet — be the first!</p>
+          <p className="p-6 text-center text-muted">No scores yet — be the first!</p>
         )}
         {entries.map((entry, i) => (
           <div key={entry.userId} className="flex items-center gap-4 p-4">
-            <span className="w-6 text-center font-mono text-slate-400">{i + 1}</span>
+            <span className="w-6 text-center font-mono text-muted">{i + 1}</span>
             <span className="flex-1 truncate font-medium">
               {entry.name}
               {entry.verified && (
-                <span className="ml-1 text-violet-400" aria-label="Verified human" title="Verified human">
+                <span className="ml-1 text-brand" aria-label="Verified human" title="Verified human">
                   ✓
                 </span>
               )}
             </span>
-            <span className="font-mono text-sm text-slate-300">{entry.xp} XP</span>
+            <span className="font-mono text-sm text-muted">{entry.xp} XP</span>
           </div>
         ))}
       </Card>

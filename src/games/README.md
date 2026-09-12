@@ -6,8 +6,9 @@ inspiration. No code, illustrations, or branding were copied, and no new
 packages were added. The shared top navigation in `src/app/Nav.tsx` also
 wraps on small screens to prevent horizontal overflow.
 
-The SignQuest studio uses violet for learning, mint for progress, and amber for
-math. The camera and sign guide share a two-column layout from tablet widths;
+The interface uses warm off-white pages, white cards, charcoal text, and one
+muted green action color. Shared semantic palette tokens live in `src/globals.css`
+and adapt to high-contrast mode. The camera and sign guide share a two-column layout from tablet widths;
 phones use a single column. All sign guidance is visible text rather than audio
 alone. Supported lesson targets remain I/L/V/W/Y; Math answers remain 1–9.
 

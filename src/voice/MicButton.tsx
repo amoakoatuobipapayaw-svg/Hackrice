@@ -31,12 +31,12 @@ export function MicButton({ listen, isListening, onResult }: MicButtonProps) {
         disabled={isListening}
         aria-pressed={isListening}
         aria-label={isListening ? "Listening" : "Tap to answer by voice"}
-        className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-red-600 text-2xl text-white shadow-lg transition focus-visible:outline focus-visible:outline-4 focus-visible:outline-yellow-300 disabled:opacity-70"
+        className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-red-600 text-2xl text-white shadow-lg transition focus-visible:outline focus-visible:outline-4 focus-visible:outline-brand disabled:opacity-70"
       >
         🎤
       </button>
       {error ? (
-        <p role="alert" className="text-sm text-red-400">
+        <p role="alert" className="text-sm text-danger">
           {error}
         </p>
       ) : null}
