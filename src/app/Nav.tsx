@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { HighContrastToggle } from '../components/ui/HighContrastToggle';
+import { NAME } from '../lib/constants';
 
 const LINKS = [
   { to: '/', label: 'Learn', icon: '⌂' },
@@ -13,7 +14,7 @@ export function Nav() {
   return <header className="border-b-2 border-line bg-surface lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:w-56 lg:border-r-2 lg:border-b-0">
     <div className="flex h-full flex-col p-3 lg:p-4">
       <div className="flex items-center justify-between lg:block">
-        <NavLink to="/" className="inline-flex items-center gap-2 px-2 py-3 text-2xl font-extrabold tracking-tight text-brand lg:mb-6 lg:py-5"><span aria-hidden="true" className="text-3xl">✋</span>signquest</NavLink>
+        <NavLink to="/" className="inline-flex items-center gap-2 px-2 py-3 text-2xl font-extrabold tracking-tight text-brand lowercase lg:mb-6 lg:py-5"><span aria-hidden="true" className="text-3xl">✋</span>{NAME}</NavLink>
         <div className="lg:hidden"><HighContrastToggle /></div>
       </div>
       <nav aria-label="Main navigation" className="grid grid-cols-5 gap-1 lg:flex lg:flex-col lg:gap-2">

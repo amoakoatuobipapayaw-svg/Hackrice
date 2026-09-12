@@ -1,4 +1,4 @@
--- SignQuest schema. Source of truth for profiles/scores/streaks.
+-- Signly schema. Source of truth for profiles/scores/streaks.
 -- Re-run safely: every statement is idempotent (create-if-not-exists / drop-then-create for policies).
 --
 -- Hackathon-scale tradeoff: there's no Supabase Auth wired up, so RLS can't

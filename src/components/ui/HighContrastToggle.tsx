@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "./Button";
 
-const STORAGE_KEY = "signquest:high-contrast";
+const STORAGE_KEY = "signly:high-contrast";
 
 function readInitial(): boolean {
   try {

@@ -4,7 +4,7 @@
 // profiles in supabase.ts without changing the UserProfile shape.
 import type { UserProfile } from "./contracts";
 
-const STORAGE_KEY = "signquest:profile";
+const STORAGE_KEY = "signly:profile";
 
 export function getLocalProfile(): UserProfile | null {
   const raw = localStorage.getItem(STORAGE_KEY);
