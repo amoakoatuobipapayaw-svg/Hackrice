@@ -3,16 +3,31 @@
 The visual layout follows the sidebar, winding learning path, raised buttons,
 and progress-card patterns in https://github.com/sanidhyy/duolingo-clone.
 The implementation is original React/Tailwind code; no assets or source code were
-copied and no new packages were added. Home links each path node to a working
-practice mode without implying tracked completion or locked lessons.
+copied and no new packages were added. Home renders `Roadmap.tsx`, a unit path
+grouped by handshape family (see `signCatalog.ts`'s `UNITS`); a unit shows locked
+("coming soon") until every sign in it is confirmable.
 
 White surfaces, green actions and blue selected navigation use shared semantic
 tokens in `src/globals.css`, including high-contrast overrides. The sidebar becomes
 a compact top navigation on phones. Camera and sign guide sit side by side from
-tablet widths. Supported lesson targets remain I/L/V/W/Y; Math answers remain 1–9.
+tablet widths.
+
+Lesson targets and unit lock state are DERIVED, not hardcoded: `signCatalog.ts`'s
+`LETTER_CATALOG`/`NUMBER_CATALOG` and `isUnitUnlocked()` read straight from
+`recognition/signClassifier.ts`'s `DEMO_LETTERS`/`DEMO_NUMBERS`. Promoting a sign
+there (see that file's `CONFIDENCE_CAP` table) is what surfaces it in lessons and
+unlocks its unit — nothing in `src/games/` needs to change for that. Today only
+`core-five` (I/L/V/W/Y) and `numbers-1-9` (1-9) are unlocked; the rest of the
+alphabet has classifier rules but scores below the confirm threshold until tested
+live and promoted. `Lesson.tsx` reads a `?unit=<id>` query param (set by
+`Roadmap.tsx`'s links) to scope its five targets to one unit, falling back to the
+full unlocked letter catalog if the param is absent, unknown, or not yet unlocked.
 
 - `GameLayout.tsx`: mode navigation, page headings, progress and profile entry.
-- `SignGuide.tsx`: three-step hand-shape instructions and lesson milestones.
+- `Roadmap.tsx`: the unit path rendered on Home; locked/unlocked state per unit.
+- `SignGuide.tsx`: three-step hand-shape instructions and lesson milestones,
+  covering every static letter (not just the currently-unlocked ones) so a unit
+  is ready to use the moment it unlocks.
 - `CameraPanel.tsx`: camera setup, loading, error/retry, pause, detected shape,
   and hold feedback. Both video and overlay remain mounted before camera start.
 - `RoundComplete.tsx`: earned XP, confirmed signs, score and retry navigation.

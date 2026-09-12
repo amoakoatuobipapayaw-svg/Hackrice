@@ -3,6 +3,7 @@
 // just supplies the target, speaks prompts/results aloud, and scores the
 // round once all five are confirmed.
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Caption } from "../voice/Caption";
 import { useVoice } from "../voice/useVoice";
 import { useSignRecognition } from "../recognition/useSignRecognition";
@@ -12,13 +13,16 @@ import { completeRound, LESSON_LENGTH, scoreRound } from "./gameLogic";
 import { CameraPanel } from "./CameraPanel";
 import { GameLayout, ProfileGate } from "./GameLayout";
 import { RoundComplete } from "./RoundComplete";
-import { LETTER_CATALOG, pickSigns } from "./signCatalog";
+import { findUnit, isUnitUnlocked, LETTER_CATALOG, pickSigns } from "./signCatalog";
 
 import { SignGuide } from "./SignGuide";
 
 export function Lesson() {
   const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
-  const targets = useMemo(() => pickSigns(LESSON_LENGTH, LETTER_CATALOG), []);
+  const [searchParams] = useSearchParams();
+  const unit = findUnit(searchParams.get("unit"));
+  const unitCatalog = unit && unit.vocabulary === "letters" && isUnitUnlocked(unit) ? unit.signs : LETTER_CATALOG;
+  const targets = useMemo(() => pickSigns(LESSON_LENGTH, unitCatalog), [unitCatalog]);
   const [index, setIndex] = useState(0);
   const [result, setResult] = useState<RoundResult | null>(null);
 
@@ -72,7 +76,7 @@ export function Lesson() {
     );
   }
 
-  return <GameLayout mode="Guided practice" title="Learn five signs." description="Learn five shapes at your own pace. Follow the guide, sign to your camera, and hold steady to move forward." progress={index / LESSON_LENGTH} progressLabel={`${index} of ${LESSON_LENGTH} complete`}>
+  return <GameLayout mode="Guided practice" title={unit ? unit.title : "Learn five signs."} description="Learn five shapes at your own pace. Follow the guide, sign to your camera, and hold steady to move forward." progress={index / LESSON_LENGTH} progressLabel={`${index} of ${LESSON_LENGTH} complete`}>
     <div className="grid gap-5 md:grid-cols-2">
       <SignGuide target={target ?? 'I'} targets={targets} completed={index} />
       <CameraPanel recognition={recognition} target={target} />

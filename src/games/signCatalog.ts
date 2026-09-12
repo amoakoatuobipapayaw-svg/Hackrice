@@ -1,12 +1,14 @@
-// MVP sign catalogs Lesson/Speed Challenge draw prompts from. Recognition's
-// real classifier (src/recognition/signClassifier.ts) only reliably confirms
-// the letters I, L, V, W, Y and digits 1-9 today — other letters exist but
-// score below the confirmation threshold on purpose, and word signs like
-// "THANK YOU" exist in the mock only (see src/recognition/README.md).
-// CLAUDE.md's golden demo line ("sign THANK YOU") isn't achievable with the
-// real recognizer yet; these catalogs stick to what can actually confirm.
-export const LETTER_CATALOG = ["I", "L", "V", "W", "Y"] as const;
-export const NUMBER_CATALOG = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
+// Sign catalogs Lesson/Speed Challenge draw prompts from, plus the unit
+// roadmap (Roadmap.tsx) that groups the full alphabet and 0-9 into a
+// Duolingo-style course. Catalogs and unit lock status are DERIVED from
+// signClassifier's DEMO_LETTERS/DEMO_NUMBERS, not hardcoded here — promoting
+// a sign there (see the CONFIDENCE_CAP table and its comment) is what
+// surfaces it in lessons and unlocks its unit, with no edit needed in this
+// file.
+import { DEMO_LETTERS, DEMO_NUMBERS } from "../recognition/signClassifier";
+
+export const LETTER_CATALOG: readonly string[] = DEMO_LETTERS;
+export const NUMBER_CATALOG: readonly string[] = DEMO_NUMBERS;
 
 export function pickSigns(count: number, catalog: readonly string[] = LETTER_CATALOG): string[] {
   const picks: string[] = [];
@@ -14,4 +16,40 @@ export function pickSigns(count: number, catalog: readonly string[] = LETTER_CAT
     picks.push(catalog[i % catalog.length]);
   }
   return picks;
+}
+
+export type Unit = {
+  id: string;
+  title: string;
+  vocabulary: "letters" | "numbers";
+  signs: readonly string[];
+};
+
+// Grouped by handshape family (a teaching heuristic, not a linguistic
+// classification) so each unit builds on a motor pattern the learner just
+// practiced. Every static letter and digit appears in exactly one unit;
+// J and Z need a temporal trajectory the classifier doesn't track yet, so
+// their unit can never unlock until that lands.
+export const UNITS: readonly Unit[] = [
+  { id: "numbers-1-9", title: "Counting practice", vocabulary: "numbers", signs: ["1", "2", "3", "4", "5", "6", "7", "8", "9"] },
+  { id: "core-five", title: "Getting started", vocabulary: "letters", signs: ["I", "L", "V", "W", "Y"] },
+  { id: "fist-shapes", title: "Fist shapes", vocabulary: "letters", signs: ["A", "E", "M", "N", "S", "T"] },
+  { id: "open-hand", title: "Open & rounded hand", vocabulary: "letters", signs: ["B", "C", "O", "U"] },
+  { id: "pointing", title: "Pointing shapes", vocabulary: "letters", signs: ["D", "G", "Q", "R", "X"] },
+  { id: "pinch-curl", title: "Pinch & curl", vocabulary: "letters", signs: ["F", "H", "K", "P"] },
+  { id: "zero", title: "Zero", vocabulary: "numbers", signs: ["0"] },
+  { id: "motion-letters", title: "Motion letters", vocabulary: "letters", signs: ["J", "Z"] },
+];
+
+function unitCatalog(unit: Unit): readonly string[] {
+  return unit.vocabulary === "numbers" ? DEMO_NUMBERS : DEMO_LETTERS;
+}
+
+export function isUnitUnlocked(unit: Unit): boolean {
+  const demo = unitCatalog(unit);
+  return unit.signs.every((sign) => demo.includes(sign));
+}
+
+export function findUnit(id: string | null | undefined): Unit | undefined {
+  return UNITS.find((unit) => unit.id === id);
 }
