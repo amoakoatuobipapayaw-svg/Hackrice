@@ -4,6 +4,7 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Icon } from "../components/ui/Icon";
 import { LogoMark, Wordmark } from "../components/ui/Logo";
+import { signInWithGoogle } from "../lib/auth";
 import { createLocalProfile } from "../lib/localProfile";
 import { setTtsEnabled } from "../voice/ttsPreference";
 
@@ -12,6 +13,7 @@ const TILT = ["-rotate-3", "rotate-2", "-rotate-1", "rotate-3", "-rotate-2"];
 export function Onboarding() {
   const [name, setName] = useState("");
   const [speakAloud, setSpeakAloud] = useState(true);
+  const [googleError, setGoogleError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   function handleSubmit(e: FormEvent) {
@@ -29,6 +31,17 @@ export function Onboarding() {
     }`;
 
   const letters = name.replace(/[^a-z]/gi, "").slice(0, 10).toUpperCase().split("");
+
+  async function handleGoogleSignIn() {
+    setGoogleError(null);
+    try {
+      // Redirects the whole page to Google, then back to "/" on success —
+      // Home.tsx resolves the signed-in profile from there (lib/profile.ts).
+      await signInWithGoogle();
+    } catch {
+      setGoogleError("Google sign-in isn't set up yet. Continue as a guest below.");
+    }
+  }
 
   return (
     <div className="mx-auto grid max-w-5xl items-center gap-10 px-4 py-10 lg:grid-cols-[1.1fr_1fr] lg:py-20">
@@ -58,7 +71,18 @@ export function Onboarding() {
       </div>
 
       <Card className="w-full">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div className="flex flex-col gap-2 border-b-2 border-line pb-5 text-center">
+          <Button type="button" variant="secondary" onClick={handleGoogleSignIn}>
+            Sign in with Google
+          </Button>
+          {googleError && <p className="text-xs text-red-400">{googleError}</p>}
+          <p className="text-xs text-muted">
+            Creates a real account: your streak and XP follow you to any device, and
+            you can verify with Persona to join the leaderboard.
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5 pt-5">
+          <p className="-mt-2 text-center text-xs font-bold text-muted">or continue as a guest</p>
           <label className="flex flex-col gap-2 text-sm font-extrabold">
             What should we call you?
             <input
@@ -86,7 +110,8 @@ export function Onboarding() {
             Start learning
           </Button>
           <p className="text-center text-xs text-muted">
-            No account needed. Verify later to post scores to the public leaderboard.
+            Guest progress stays on this device only — nothing above is required
+            to start practicing.
           </p>
         </form>
       </Card>

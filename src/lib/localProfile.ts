@@ -20,6 +20,12 @@ export function saveLocalProfile(profile: UserProfile): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
 }
 
+/** Called on logout so a signed-out session doesn't keep showing the
+ * previous Google account's cached data. */
+export function clearLocalProfile(): void {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
 export function createLocalProfile(name: string): UserProfile {
   const profile: UserProfile = {
     id: crypto.randomUUID(),

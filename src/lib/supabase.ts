@@ -67,10 +67,10 @@ export async function postScore(entry: ScoreEntry): Promise<void> {
 }
 
 /**
- * Upserts the full profile row. Called once when a guest verifies via
- * Persona (creating their account for the first time — see
- * meta/PersonaGate.tsx) and again after every completed round to keep
- * server-side XP/level/streak in sync with the local copy.
+ * Upserts the full profile row. Called once when a Google account first
+ * signs in (creating the row — see lib/auth.ts, lib/profile.ts) and again
+ * after every completed round to keep server-side XP/level/streak in
+ * sync. Guests never call this — they stay local-only.
  */
 export async function syncProfile(profile: UserProfile): Promise<void> {
   if (!supabase) {
@@ -81,6 +81,7 @@ export async function syncProfile(profile: UserProfile): Promise<void> {
   const { error } = await supabase.from("profiles").upsert({
     id: profile.id,
     name: profile.name,
+    email: profile.email,
     streak: profile.streak,
     xp: profile.xp,
     level: profile.level,
@@ -94,7 +95,7 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, name, streak, xp, level, verified")
+    .select("id, name, email, streak, xp, level, verified")
     .eq("id", userId)
     .maybeSingle();
 
