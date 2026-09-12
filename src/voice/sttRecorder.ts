@@ -1,11 +1,14 @@
 // Records a mic clip and sends it to /api/stt (ElevenLabs) for transcription.
-// Stops automatically once the speaker goes quiet, instead of a fixed
-// duration — a fixed window either waits through dead air after a short
-// answer (feels slow) or cuts off a longer one mid-word (misheard).
-const SILENCE_RMS_THRESHOLD = 0.02;
-const SILENCE_HOLD_MS = 900; // quiet time after speech before we call it done
-const MIN_RECORD_MS = 400; // ignore the button-press instant as "silence"
-const MAX_RECORD_MS = 8000; // safety cap if speech never stops/starts
+// Answers here are always a single spoken word (a digit), so this is tuned
+// to grab that one word and get out: a short calibration window learns the
+// room's actual noise floor (a fixed volume threshold either never triggers
+// on a quiet mic or never quiets down in a noisy room), then it stops
+// shortly after the speaker goes quiet instead of waiting out a long timer.
+const CALIBRATION_MS = 250; // learn ambient noise before listening for speech
+const NOISE_MARGIN = 0.025; // how much louder than ambient counts as "speaking"
+const MIN_SPEECH_THRESHOLD = 0.015; // floor so a silent room doesn't self-trigger
+const SILENCE_HOLD_MS = 600; // quiet time after speech before we call it done
+const MAX_RECORD_MS = 4000; // one spoken number should never need more than this
 
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -20,7 +23,9 @@ function blobToBase64(blob: Blob): Promise<string> {
 }
 
 /** Resolves once the stream has gone quiet after speech was heard, or the
- * safety cap is hit — whichever comes first. */
+ * safety cap is hit — whichever comes first. Spends the first
+ * CALIBRATION_MS learning this mic/room's ambient noise level rather than
+ * guessing a fixed volume threshold. */
 function waitForSilence(stream: MediaStream): Promise<void> {
   return new Promise((resolve) => {
     const audioContext = new AudioContext();
@@ -30,7 +35,10 @@ function waitForSilence(stream: MediaStream): Promise<void> {
     source.connect(analyser);
     const data = new Uint8Array(analyser.frequencyBinCount);
 
-    const start = Date.now();
+    const start = performance.now();
+    let ambientSum = 0;
+    let ambientSamples = 0;
+    let threshold: number | null = null;
     let hasSpoken = false;
     let silenceSince: number | null = null;
     let frame: number;
@@ -41,26 +49,39 @@ function waitForSilence(stream: MediaStream): Promise<void> {
       resolve();
     }
 
-    function tick() {
+    function currentRms(): number {
       analyser.getByteTimeDomainData(data);
       let sumSquares = 0;
       for (const value of data) {
         const centered = (value - 128) / 128;
         sumSquares += centered * centered;
       }
-      const rms = Math.sqrt(sumSquares / data.length);
-      const now = Date.now();
-      const elapsed = now - start;
+      return Math.sqrt(sumSquares / data.length);
+    }
 
-      if (rms > SILENCE_RMS_THRESHOLD) {
+    function tick() {
+      const now = performance.now();
+      const elapsed = now - start;
+      const level = currentRms();
+
+      if (threshold === null) {
+        ambientSum += level;
+        ambientSamples += 1;
+        if (elapsed >= CALIBRATION_MS) {
+          threshold = Math.max(MIN_SPEECH_THRESHOLD, ambientSum / ambientSamples + NOISE_MARGIN);
+        }
+        frame = requestAnimationFrame(tick);
+        return;
+      }
+
+      if (level > threshold) {
         hasSpoken = true;
         silenceSince = null;
       } else if (hasSpoken && silenceSince === null) {
         silenceSince = now;
       }
 
-      const wentQuietAfterSpeech =
-        hasSpoken && silenceSince !== null && now - silenceSince >= SILENCE_HOLD_MS && elapsed >= MIN_RECORD_MS;
+      const wentQuietAfterSpeech = hasSpoken && silenceSince !== null && now - silenceSince >= SILENCE_HOLD_MS;
 
       if (wentQuietAfterSpeech || elapsed >= MAX_RECORD_MS) {
         finish();
