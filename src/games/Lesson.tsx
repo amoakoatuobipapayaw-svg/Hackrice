@@ -1,25 +1,35 @@
-// Lesson mode: sign 5 targets in a row. Recognition owns hold-to-confirm and
-// Gemini coaching internally (see src/recognition/README.md); this screen
-// just supplies the target, speaks prompts/results aloud, and scores the
-// round once all five are confirmed.
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+// Lesson mode: 5 signs in a row. Show the target (label + handshape), the
+// player holds it to the camera, recognition confirms it, we flash success,
+// speak it aloud, and advance. Gemini coaching runs inside recognition
+// (coaching: true) and we surface its line. Skip is always available so a
+// sign the classifier won't confirm can never dead-end the lesson.
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../components/ui/Button";
 import { Caption } from "../voice/Caption";
 import { useVoice } from "../voice/useVoice";
-import { useSignRecognition } from "../recognition/useSignRecognition";
-import type { RoundResult, SignResult, UserProfile } from "../lib/contracts";
-import { getLocalProfile } from "../lib/localProfile";
-import { completeRound, LESSON_LENGTH, scoreRound } from "./gameLogic";
-import { RecognitionCamera } from "./RecognitionCamera";
+import type { SignResult } from "../lib/contracts";
+import { CameraPanel } from "./CameraPanel";
+import { CoachLine } from "./CoachLine";
+import { LESSON_LENGTH } from "./gameLogic";
+import { ProgressDots, type StepOutcome } from "./ProgressDots";
+import { RequireProfile } from "./RequireProfile";
 import { RoundComplete } from "./RoundComplete";
-import { LETTER_CATALOG, pickSigns } from "./signCatalog";
+import { ScoreHud } from "./ScoreHud";
+import { LETTER_CATALOG, NUMBER_CATALOG, pickSigns } from "./signCatalog";
+import { TargetCard } from "./TargetCard";
+import { useGameRecognition } from "./useGameRecognition";
+import { useRound } from "./useRound";
+
+type SignSet = "letters" | "numbers";
+const ADVANCE_DELAY_MS = 900;
 
 export function Lesson() {
-  const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
-  const targets = useMemo(() => pickSigns(LESSON_LENGTH, LETTER_CATALOG), []);
+  const round = useRound("lesson");
+  const [signSet, setSignSet] = useState<SignSet>("letters");
+  const [targets, setTargets] = useState<string[] | null>(null);
   const [index, setIndex] = useState(0);
-  const [result, setResult] = useState<RoundResult | null>(null);
+  const [outcomes, setOutcomes] = useState<StepOutcome[]>([]);
+  const [flash, setFlash] = useState<"success" | "miss" | null>(null);
 
   const voice = useVoice();
   const voiceRef = useRef(voice);
@@ -27,95 +37,123 @@ export function Lesson() {
     voiceRef.current = voice;
   });
 
-  const target = targets[index] as string | undefined;
+  const started = targets !== null;
+  const target = started && !flash && !round.result ? targets[index] : undefined;
 
-  function handleConfirm(confirmedResult: SignResult) {
-    voiceRef.current.speak(confirmedResult.label).catch(() => {});
-    setIndex((i) => i + 1);
+  function settle(outcome: StepOutcome) {
+    if (flash || !targets) return;
+    setFlash(outcome === "correct" ? "success" : "miss");
+    const nextStats = round.record(outcome === "correct");
+    const nextOutcomes = [...outcomes, outcome];
+    setOutcomes(nextOutcomes);
+    setTimeout(() => {
+      setFlash(null);
+      if (nextOutcomes.length >= LESSON_LENGTH) {
+        recognitionRef.current.stop(); // camera off while the results screen is up
+        round.finish(nextStats);
+      } else {
+        setIndex((i) => i + 1);
+      }
+    }, ADVANCE_DELAY_MS);
   }
 
-  const recognition = useSignRecognition({ target, vocabulary: "letters", coaching: true, onConfirm: handleConfirm });
+  function handleConfirm(confirmed: SignResult) {
+    voiceRef.current.speak(confirmed.label).catch(() => {});
+    settle("correct");
+  }
 
+  const recognition = useGameRecognition({
+    target,
+    vocabulary: signSet,
+    coaching: true,
+    onConfirm: handleConfirm,
+  });
+  const recognitionRef = useRef(recognition);
+  useEffect(() => {
+    recognitionRef.current = recognition;
+  });
+
+  // Read each new prompt aloud (and caption it) — the voice bridge is part of the a11y story.
   useEffect(() => {
     if (!target) return;
     voiceRef.current.speak(`Sign ${target}`).catch(() => {});
   }, [target]);
 
+  // The <video> only exists once the lesson screen renders, so start the
+  // camera right after begin() instead of inside it.
+  // `session` bumps on every begin() so this re-runs on "Play again" even
+  // though status is already idle and the mode is already started.
+  const autoStart = useRef(false);
+  const [session, setSession] = useState(0);
+  const { status: recognitionStatus, start: startRecognition } = recognition;
   useEffect(() => {
-    if (index < LESSON_LENGTH || !profile || result) return;
-    const roundResult = scoreRound("lesson", index, LESSON_LENGTH);
-    setResult(roundResult);
-    void completeRound(profile, roundResult).then(setProfile);
-  }, [index, profile, result]);
+    if (started && autoStart.current && recognitionStatus === "idle") {
+      autoStart.current = false;
+      startRecognition();
+    }
+  }, [started, session, recognitionStatus, startRecognition]);
 
-  if (!profile) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <p className="text-slate-300">
-          <Link to="/onboarding" className="text-violet-400 underline">
-            Tell us your name
-          </Link>{" "}
-          before starting a lesson.
-        </p>
-      </div>
-    );
+  function begin(set: SignSet) {
+    setSignSet(set);
+    setTargets(pickSigns(LESSON_LENGTH, set === "letters" ? LETTER_CATALOG : NUMBER_CATALOG));
+    setIndex(0);
+    setOutcomes([]);
+    setFlash(null);
+    round.restart();
+    recognition.reset();
+    autoStart.current = true;
+    setSession((n) => n + 1);
   }
 
-  if (result) {
+  if (!round.profile) return <RequireProfile mode="a lesson" />;
+
+  if (round.result) {
     return (
       <div className="px-4 py-16">
         <RoundComplete
-          result={result}
-          profile={profile}
-          onRetry={() => {
-            recognition.reset();
-            setIndex(0);
-            setResult(null);
-          }}
+          result={round.result}
+          stats={round.stats}
+          profile={round.profile}
+          saving={round.saving}
+          onRetry={() => begin(signSet)}
         />
       </div>
     );
   }
 
-  return (
-    <div className="mx-auto max-w-xl px-4 py-12 text-center">
-      <p className="text-sm font-medium text-slate-400">
-        Sign {index + 1} of {LESSON_LENGTH}
-      </p>
-      <h1 className="mt-2 text-4xl font-bold">{target}</h1>
-
-      <div className="mt-4">
-        <RecognitionCamera videoRef={recognition.videoRef} canvasRef={recognition.canvasRef} />
+  if (!started) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-12 text-center">
+        <h1 className="text-3xl font-black">Lesson</h1>
+        <p className="mt-2 text-slate-400">
+          Five signs, one at a time. Hold each shape steady for a second and the camera will confirm it.
+        </p>
+        <div className="mt-8 grid gap-3 sm:grid-cols-2">
+          <Button onClick={() => begin("letters")} className="py-5 text-lg">
+            Letters
+            <span className="block text-xs font-normal opacity-80">{LETTER_CATALOG.join(" · ")}</span>
+          </Button>
+          <Button variant="secondary" onClick={() => begin("numbers")} className="py-5 text-lg">
+            Numbers
+            <span className="block text-xs font-normal opacity-80">1 – 9</span>
+          </Button>
+        </div>
       </div>
+    );
+  }
 
-      {recognition.status === "idle" && (
-        <Button className="mt-4" onClick={recognition.start}>
-          Start camera
-        </Button>
-      )}
-      {recognition.status === "loading" && <p className="mt-4 text-slate-400">Starting camera…</p>}
-      {recognition.status === "error" && (
-        <p className="mt-4 text-red-400" role="alert">
-          {recognition.error}
-        </p>
-      )}
-
-      <p className="mt-4 text-slate-300">
-        Recognized: <span className="font-mono">{recognition.current?.label ?? "—"}</span>
-      </p>
-      <label className="mx-auto mt-2 block max-w-xs text-sm text-slate-400">
-        Hold to confirm
-        <progress className="mt-1 w-full" value={recognition.holdProgress} max={1} />
-      </label>
-
-      {recognition.coachingLine && (
-        <p className="mt-6 text-violet-300" role="status">
-          {recognition.coachingLine}
-        </p>
-      )}
-
-      <div className="mt-8 flex justify-center">
+  return (
+    <div className="mx-auto max-w-xl space-y-4 px-4 py-8">
+      <ProgressDots total={LESSON_LENGTH} current={index} outcomes={outcomes} />
+      <TargetCard label={targets[index]} eyebrow={`Sign ${index + 1} of ${LESSON_LENGTH}`} celebrate={flash === "success"} />
+      <ScoreHud stats={round.stats} />
+      <CameraPanel recognition={recognition} target={target} flash={flash} />
+      <CoachLine line={recognition.coachingLine} active={recognition.status === "running"} />
+      <div className="flex items-center justify-between">
         <Caption caption={voice.caption} isSpeaking={voice.isSpeaking} isListening={voice.isListening} />
+        <Button variant="ghost" onClick={() => settle("miss")} disabled={!!flash} className="text-sm">
+          Skip this sign
+        </Button>
       </div>
     </div>
   );

@@ -1,0 +1,2014 @@
+diff --git a/src/games/CameraPanel.tsx b/src/games/CameraPanel.tsx
+new file mode 100644
+index 0000000..179145d
+--- /dev/null
++++ b/src/games/CameraPanel.tsx
+@@ -0,0 +1,104 @@
++// Webcam + landmark overlay + everything the player needs to know about the
++// recognizer right now: start button, loading/error state, the live guess,
++// and the hold-to-confirm ring. Shared by all three modes so the camera
++// experience is identical everywhere.
++import { Button } from "../components/ui/Button";
++import type { Recognition } from "../recognition/types";
++import { RecognitionCamera } from "./RecognitionCamera";
++
++type CameraPanelProps = {
++  recognition: Recognition;
++  /** What we're waiting for; used to colour the live guess. */
++  target?: string;
++  /** Brief overlay after a confirmed rep. */
++  flash?: "success" | "miss" | null;
++  startLabel?: string;
++};
++
++export function CameraPanel({ recognition, target, flash, startLabel = "Start camera" }: CameraPanelProps) {
++  const { status, error, current, holdProgress } = recognition;
++  const guess = current?.label ?? null;
++  const matches = guess !== null && guess === target;
++  const pct = Math.round(holdProgress * 100);
++
++  return (
++    <div className="relative">
++      <RecognitionCamera videoRef={recognition.videoRef} canvasRef={recognition.canvasRef} />
++
++      {status === "idle" && (
++        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl bg-slate-950/80 px-4 text-center">
++          <p className="text-sm text-slate-300">Your camera stays in the browser — nothing is uploaded.</p>
++          <Button onClick={recognition.start}>{startLabel}</Button>
++        </div>
++      )}
++      {status === "loading" && (
++        <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-slate-950/70">
++          <p className="animate-pulse text-slate-200" role="status">
++            Starting camera and hand tracker…
++          </p>
++        </div>
++      )}
++      {status === "error" && (
++        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl bg-slate-950/85 px-6 text-center">
++          <p className="text-red-300" role="alert">
++            {error}
++          </p>
++          <Button variant="secondary" onClick={recognition.start}>
++            Try again
++          </Button>
++        </div>
++      )}
++
++      {flash && (
++        <div
++          aria-hidden="true"
++          className={`pointer-events-none absolute inset-0 rounded-xl ring-8 ring-inset transition-opacity ${
++            flash === "success" ? "ring-emerald-400/80" : "ring-red-400/70"
++          }`}
++        />
++      )}
++
++      {status === "running" && (
++        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 rounded-b-xl bg-gradient-to-t from-slate-950/90 to-transparent px-4 pb-3 pt-8">
++          <p className="text-sm text-slate-300">
++            Seeing:{" "}
++            <span
++              className={`font-mono text-lg font-bold ${matches ? "text-emerald-300" : guess ? "text-amber-200" : "text-slate-500"}`}
++              aria-live="polite"
++            >
++              {guess ?? "no hand"}
++            </span>
++          </p>
++          <HoldRing pct={pct} active={matches} />
++        </div>
++      )}
++    </div>
++  );
++}
++
++/** Circular hold-to-confirm indicator; fills while the target sign is stable. */
++function HoldRing({ pct, active }: { pct: number; active: boolean }) {
++  const r = 16;
++  const c = 2 * Math.PI * r;
++  return (
++    <div className="flex items-center gap-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Hold to confirm">
++      <span className="text-xs text-slate-400">{active ? "Hold it…" : "Hold to confirm"}</span>
++      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
++        <circle cx="20" cy="20" r={r} fill="none" stroke="rgb(51 65 85)" strokeWidth="4" />
++        <circle
++          cx="20"
++          cy="20"
++          r={r}
++          fill="none"
++          stroke={active ? "rgb(52 211 153)" : "rgb(167 139 250)"}
++          strokeWidth="4"
++          strokeLinecap="round"
++          strokeDasharray={c}
++          strokeDashoffset={c * (1 - pct / 100)}
++          transform="rotate(-90 20 20)"
++          style={{ transition: "stroke-dashoffset 80ms linear" }}
++        />
++      </svg>
++    </div>
++  );
++}
+diff --git a/src/games/CoachLine.tsx b/src/games/CoachLine.tsx
+new file mode 100644
+index 0000000..b617c09
+--- /dev/null
++++ b/src/games/CoachLine.tsx
+@@ -0,0 +1,27 @@
++// The one line of Gemini coaching recognition surfaces every few seconds.
++// Keeps its slot on screen even while empty so the layout doesn't jump.
++type CoachLineProps = {
++  line: string | null;
++  /** True while the camera is running, so the empty state can say "watching". */
++  active: boolean;
++};
++
++export function CoachLine({ line, active }: CoachLineProps) {
++  return (
++    <div
++      role="status"
++      aria-live="polite"
++      className="flex min-h-14 items-center gap-3 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3"
++    >
++      <span className="text-xl" aria-hidden="true">
++        🧑‍🏫
++      </span>
++      <div>
++        <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-300">Coach</p>
++        <p className="text-sm text-slate-100">
++          {line ?? (active ? "Watching your hand — tips arrive every few seconds." : "Start the camera to get live coaching.")}
++        </p>
++      </div>
++    </div>
++  );
++}
+diff --git a/src/games/Lesson.tsx b/src/games/Lesson.tsx
+index 4c4115d..f0f3118 100644
+--- a/src/games/Lesson.tsx
++++ b/src/games/Lesson.tsx
+@@ -1,25 +1,35 @@
+-// Lesson mode: sign 5 targets in a row. Recognition owns hold-to-confirm and
+-// Gemini coaching internally (see src/recognition/README.md); this screen
+-// just supplies the target, speaks prompts/results aloud, and scores the
+-// round once all five are confirmed.
+-import { useEffect, useMemo, useRef, useState } from "react";
+-import { Link } from "react-router-dom";
++// Lesson mode: 5 signs in a row. Show the target (label + handshape), the
++// player holds it to the camera, recognition confirms it, we flash success,
++// speak it aloud, and advance. Gemini coaching runs inside recognition
++// (coaching: true) and we surface its line. Skip is always available so a
++// sign the classifier won't confirm can never dead-end the lesson.
++import { useEffect, useRef, useState } from "react";
+ import { Button } from "../components/ui/Button";
+ import { Caption } from "../voice/Caption";
+ import { useVoice } from "../voice/useVoice";
+-import { useSignRecognition } from "../recognition/useSignRecognition";
+-import type { RoundResult, SignResult, UserProfile } from "../lib/contracts";
+-import { getLocalProfile } from "../lib/localProfile";
+-import { completeRound, LESSON_LENGTH, scoreRound } from "./gameLogic";
+-import { RecognitionCamera } from "./RecognitionCamera";
++import type { SignResult } from "../lib/contracts";
++import { CameraPanel } from "./CameraPanel";
++import { CoachLine } from "./CoachLine";
++import { LESSON_LENGTH } from "./gameLogic";
++import { ProgressDots, type StepOutcome } from "./ProgressDots";
++import { RequireProfile } from "./RequireProfile";
+ import { RoundComplete } from "./RoundComplete";
+-import { LETTER_CATALOG, pickSigns } from "./signCatalog";
++import { ScoreHud } from "./ScoreHud";
++import { LETTER_CATALOG, NUMBER_CATALOG, pickSigns } from "./signCatalog";
++import { TargetCard } from "./TargetCard";
++import { useGameRecognition } from "./useGameRecognition";
++import { useRound } from "./useRound";
++
++type SignSet = "letters" | "numbers";
++const ADVANCE_DELAY_MS = 900;
+ 
+ export function Lesson() {
+-  const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
+-  const targets = useMemo(() => pickSigns(LESSON_LENGTH, LETTER_CATALOG), []);
++  const round = useRound("lesson");
++  const [signSet, setSignSet] = useState<SignSet>("letters");
++  const [targets, setTargets] = useState<string[] | null>(null);
+   const [index, setIndex] = useState(0);
+-  const [result, setResult] = useState<RoundResult | null>(null);
++  const [outcomes, setOutcomes] = useState<StepOutcome[]>([]);
++  const [flash, setFlash] = useState<"success" | "miss" | null>(null);
+ 
+   const voice = useVoice();
+   const voiceRef = useRef(voice);
+@@ -27,95 +37,123 @@ export function Lesson() {
+     voiceRef.current = voice;
+   });
+ 
+-  const target = targets[index] as string | undefined;
++  const started = targets !== null;
++  const target = started && !flash && !round.result ? targets[index] : undefined;
+ 
+-  function handleConfirm(confirmedResult: SignResult) {
+-    voiceRef.current.speak(confirmedResult.label).catch(() => {});
+-    setIndex((i) => i + 1);
++  function settle(outcome: StepOutcome) {
++    if (flash || !targets) return;
++    setFlash(outcome === "correct" ? "success" : "miss");
++    const nextStats = round.record(outcome === "correct");
++    const nextOutcomes = [...outcomes, outcome];
++    setOutcomes(nextOutcomes);
++    setTimeout(() => {
++      setFlash(null);
++      if (nextOutcomes.length >= LESSON_LENGTH) {
++        recognitionRef.current.stop(); // camera off while the results screen is up
++        round.finish(nextStats);
++      } else {
++        setIndex((i) => i + 1);
++      }
++    }, ADVANCE_DELAY_MS);
+   }
+ 
+-  const recognition = useSignRecognition({ target, vocabulary: "letters", coaching: true, onConfirm: handleConfirm });
++  function handleConfirm(confirmed: SignResult) {
++    voiceRef.current.speak(confirmed.label).catch(() => {});
++    settle("correct");
++  }
+ 
++  const recognition = useGameRecognition({
++    target,
++    vocabulary: signSet,
++    coaching: true,
++    onConfirm: handleConfirm,
++  });
++  const recognitionRef = useRef(recognition);
++  useEffect(() => {
++    recognitionRef.current = recognition;
++  });
++
++  // Read each new prompt aloud (and caption it) — the voice bridge is part of the a11y story.
+   useEffect(() => {
+     if (!target) return;
+     voiceRef.current.speak(`Sign ${target}`).catch(() => {});
+   }, [target]);
+ 
++  // The <video> only exists once the lesson screen renders, so start the
++  // camera right after begin() instead of inside it.
++  // `session` bumps on every begin() so this re-runs on "Play again" even
++  // though status is already idle and the mode is already started.
++  const autoStart = useRef(false);
++  const [session, setSession] = useState(0);
++  const { status: recognitionStatus, start: startRecognition } = recognition;
+   useEffect(() => {
+-    if (index < LESSON_LENGTH || !profile || result) return;
+-    const roundResult = scoreRound("lesson", index, LESSON_LENGTH);
+-    setResult(roundResult);
+-    void completeRound(profile, roundResult).then(setProfile);
+-  }, [index, profile, result]);
++    if (started && autoStart.current && recognitionStatus === "idle") {
++      autoStart.current = false;
++      startRecognition();
++    }
++  }, [started, session, recognitionStatus, startRecognition]);
+ 
+-  if (!profile) {
+-    return (
+-      <div className="mx-auto max-w-md px-4 py-16 text-center">
+-        <p className="text-slate-300">
+-          <Link to="/onboarding" className="text-violet-400 underline">
+-            Tell us your name
+-          </Link>{" "}
+-          before starting a lesson.
+-        </p>
+-      </div>
+-    );
++  function begin(set: SignSet) {
++    setSignSet(set);
++    setTargets(pickSigns(LESSON_LENGTH, set === "letters" ? LETTER_CATALOG : NUMBER_CATALOG));
++    setIndex(0);
++    setOutcomes([]);
++    setFlash(null);
++    round.restart();
++    recognition.reset();
++    autoStart.current = true;
++    setSession((n) => n + 1);
+   }
+ 
+-  if (result) {
++  if (!round.profile) return <RequireProfile mode="a lesson" />;
++
++  if (round.result) {
+     return (
+       <div className="px-4 py-16">
+         <RoundComplete
+-          result={result}
+-          profile={profile}
+-          onRetry={() => {
+-            recognition.reset();
+-            setIndex(0);
+-            setResult(null);
+-          }}
++          result={round.result}
++          stats={round.stats}
++          profile={round.profile}
++          saving={round.saving}
++          onRetry={() => begin(signSet)}
+         />
+       </div>
+     );
+   }
+ 
+-  return (
+-    <div className="mx-auto max-w-xl px-4 py-12 text-center">
+-      <p className="text-sm font-medium text-slate-400">
+-        Sign {index + 1} of {LESSON_LENGTH}
+-      </p>
+-      <h1 className="mt-2 text-4xl font-bold">{target}</h1>
+-
+-      <div className="mt-4">
+-        <RecognitionCamera videoRef={recognition.videoRef} canvasRef={recognition.canvasRef} />
+-      </div>
+-
+-      {recognition.status === "idle" && (
+-        <Button className="mt-4" onClick={recognition.start}>
+-          Start camera
+-        </Button>
+-      )}
+-      {recognition.status === "loading" && <p className="mt-4 text-slate-400">Starting camera…</p>}
+-      {recognition.status === "error" && (
+-        <p className="mt-4 text-red-400" role="alert">
+-          {recognition.error}
+-        </p>
+-      )}
+-
+-      <p className="mt-4 text-slate-300">
+-        Recognized: <span className="font-mono">{recognition.current?.label ?? "—"}</span>
+-      </p>
+-      <label className="mx-auto mt-2 block max-w-xs text-sm text-slate-400">
+-        Hold to confirm
+-        <progress className="mt-1 w-full" value={recognition.holdProgress} max={1} />
+-      </label>
+-
+-      {recognition.coachingLine && (
+-        <p className="mt-6 text-violet-300" role="status">
+-          {recognition.coachingLine}
++  if (!started) {
++    return (
++      <div className="mx-auto max-w-xl px-4 py-12 text-center">
++        <h1 className="text-3xl font-black">Lesson</h1>
++        <p className="mt-2 text-slate-400">
++          Five signs, one at a time. Hold each shape steady for a second and the camera will confirm it.
+         </p>
+-      )}
++        <div className="mt-8 grid gap-3 sm:grid-cols-2">
++          <Button onClick={() => begin("letters")} className="py-5 text-lg">
++            Letters
++            <span className="block text-xs font-normal opacity-80">{LETTER_CATALOG.join(" · ")}</span>
++          </Button>
++          <Button variant="secondary" onClick={() => begin("numbers")} className="py-5 text-lg">
++            Numbers
++            <span className="block text-xs font-normal opacity-80">1 – 9</span>
++          </Button>
++        </div>
++      </div>
++    );
++  }
+ 
+-      <div className="mt-8 flex justify-center">
++  return (
++    <div className="mx-auto max-w-xl space-y-4 px-4 py-8">
++      <ProgressDots total={LESSON_LENGTH} current={index} outcomes={outcomes} />
++      <TargetCard label={targets[index]} eyebrow={`Sign ${index + 1} of ${LESSON_LENGTH}`} celebrate={flash === "success"} />
++      <ScoreHud stats={round.stats} />
++      <CameraPanel recognition={recognition} target={target} flash={flash} />
++      <CoachLine line={recognition.coachingLine} active={recognition.status === "running"} />
++      <div className="flex items-center justify-between">
+         <Caption caption={voice.caption} isSpeaking={voice.isSpeaking} isListening={voice.isListening} />
++        <Button variant="ghost" onClick={() => settle("miss")} disabled={!!flash} className="text-sm">
++          Skip this sign
++        </Button>
+       </div>
+     </div>
+   );
+diff --git a/src/games/MathMode.tsx b/src/games/MathMode.tsx
+index 1979ad2..1ce1f9c 100644
+--- a/src/games/MathMode.tsx
++++ b/src/games/MathMode.tsx
+@@ -1,29 +1,36 @@
+-// Math mode: solve arithmetic by signing the number or speaking it. Reuses
+-// voice/MicButton.tsx + voice/Caption.tsx for the speech path and
+-// recognition/useSignRecognition() (numbers vocabulary) for the sign path;
+-// recognition owns hold-to-confirm internally.
+-import { useCallback, useEffect, useRef, useState } from "react";
+-import { Link } from "react-router-dom";
++// Math mode: solve single-digit arithmetic by signing the number (A's
++// recognizer, numbers vocabulary) or saying it (C's ElevenLabs STT via
++// MicButton). Each problem has its own clock; a timeout or a wrong spoken
++// answer is a miss. Signing a wrong digit never confirms — the camera panel
++// just shows what it's seeing so the player can correct.
++import { useEffect, useRef, useState } from "react";
+ import { Button } from "../components/ui/Button";
+ import { Caption } from "../voice/Caption";
+ import { MicButton } from "../voice/MicButton";
+ import { useVoice } from "../voice/useVoice";
+-import { useSignRecognition } from "../recognition/useSignRecognition";
+-import type { RoundResult, UserProfile } from "../lib/contracts";
+-import { getLocalProfile } from "../lib/localProfile";
+-import { completeRound, MATH_ROUND_LENGTH, scoreRound } from "./gameLogic";
+-import { generateMathProblem, parseSpokenNumber } from "./mathProblems";
+-import { RecognitionCamera } from "./RecognitionCamera";
++import { CameraPanel } from "./CameraPanel";
++import { MATH_PROBLEM_SECONDS, MATH_ROUND_LENGTH } from "./gameLogic";
++import { MathProblemCard, type MathFeedback } from "./MathProblemCard";
++import { generateMathProblem, parseSpokenNumber, type MathProblem } from "./mathProblems";
++import { ProgressDots, type StepOutcome } from "./ProgressDots";
++import { RequireProfile } from "./RequireProfile";
+ import { RoundComplete } from "./RoundComplete";
++import { ScoreHud } from "./ScoreHud";
++import { useCountdown } from "./useCountdown";
++import { useGameRecognition } from "./useGameRecognition";
++import { useRound } from "./useRound";
++
++const FEEDBACK_MS = 1400;
+ 
+ export function MathMode() {
+-  const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
+-  const [problemIndex, setProblemIndex] = useState(0);
+-  const [problem, setProblem] = useState(generateMathProblem);
+-  const [correct, setCorrect] = useState(0);
+-  const [feedback, setFeedback] = useState<string | null>(null);
+-  const [result, setResult] = useState<RoundResult | null>(null);
+-  const advancedForIndexRef = useRef(-1);
++  const round = useRound("math");
++  const [started, setStarted] = useState(false);
++  const [index, setIndex] = useState(0);
++  const [problem, setProblem] = useState<MathProblem>(() => generateMathProblem(0));
++  const [outcomes, setOutcomes] = useState<StepOutcome[]>([]);
++  const [feedback, setFeedback] = useState<MathFeedback | null>(null);
++  const [hint, setHint] = useState<string | null>(null);
++  const shownAt = useRef(0);
+ 
+   const voice = useVoice();
+   const voiceRef = useRef(voice);
+@@ -31,117 +38,132 @@ export function MathMode() {
+     voiceRef.current = voice;
+   });
+ 
+-  useEffect(() => {
+-    if (result) return;
+-    voiceRef.current.speak(`What is ${problem.prompt}?`).catch(() => {});
+-  }, [problem, result]);
+-
+-  const advance = useCallback(
+-    (wasCorrect: boolean) => {
+-      if (advancedForIndexRef.current === problemIndex) return;
+-      advancedForIndexRef.current = problemIndex;
+-      if (wasCorrect) setCorrect((c) => c + 1);
+-      setFeedback(wasCorrect ? "Correct!" : `The answer was ${problem.answer}.`);
+-      setTimeout(() => {
+-        setFeedback(null);
+-        setProblemIndex((i) => i + 1);
+-        setProblem(generateMathProblem());
+-      }, 1200);
+-    },
+-    [problemIndex, problem],
+-  );
++  const open = started && !feedback && !round.result;
++  const target = open ? String(problem.answer) : undefined;
+ 
+-  const recognition = useSignRecognition({
+-    target: result ? undefined : String(problem.answer),
+-    vocabulary: "numbers",
+-    onConfirm: () => advance(true),
+-  });
++  const recognition = useGameRecognition({ target, vocabulary: "numbers", onConfirm: () => settle(true, "Signed it!") });
+   const recognitionRef = useRef(recognition);
+   useEffect(() => {
+     recognitionRef.current = recognition;
+   });
+ 
+-  useEffect(() => {
+-    if (problemIndex < MATH_ROUND_LENGTH || !profile || result) return;
+-    recognitionRef.current.stop();
+-    const roundResult = scoreRound("math", correct, MATH_ROUND_LENGTH);
+-    setResult(roundResult);
+-    void completeRound(profile, roundResult).then(setProfile);
+-  }, [problemIndex, profile, result, correct]);
++  const clock = useCountdown(MATH_PROBLEM_SECONDS, () => settle(false, "Time's up"));
++
++  function settle(wasCorrect: boolean, note: string) {
++    if (!open) return;
++    clock.stop();
++    setHint(null);
++    const elapsed = performance.now() - shownAt.current;
++    const nextStats = round.record(wasCorrect, wasCorrect ? elapsed : undefined);
++    const outcome: StepOutcome = wasCorrect ? "correct" : "miss";
++    const nextOutcomes = [...outcomes, outcome];
++    setOutcomes(nextOutcomes);
++    const text = wasCorrect ? `${note} ${problem.prompt} = ${problem.answer}` : `${note} — the answer was ${problem.answer}.`;
++    setFeedback({ kind: outcome === "correct" ? "success" : "miss", text });
++    voiceRef.current.speak(wasCorrect ? "Correct!" : `The answer was ${problem.answer}`).catch(() => {});
++    setTimeout(() => {
++      setFeedback(null);
++      if (nextOutcomes.length >= MATH_ROUND_LENGTH) {
++        recognitionRef.current.stop();
++        round.finish(nextStats);
++      } else {
++        const nextIndex = nextOutcomes.length;
++        setIndex(nextIndex);
++        setProblem(generateMathProblem(nextIndex));
++      }
++    }, FEEDBACK_MS);
++  }
+ 
+   function handleVoiceAnswer(transcript: string) {
+-    advance(parseSpokenNumber(transcript) === problem.answer);
++    const heard = parseSpokenNumber(transcript);
++    if (heard === null) {
++      // Not an answer, so the clock keeps running — just nudge them to retry.
++      setHint(`Heard "${transcript || "nothing"}" — no number in that. Try again.`);
++      return;
++    }
++    settle(heard === problem.answer, `You said ${heard}.`);
+   }
+ 
+-  if (!profile) {
++  // Each newly opened problem: restart its clock, note the start time, read it aloud.
++  const { start: startClock } = clock;
++  useEffect(() => {
++    if (!open) return;
++    shownAt.current = performance.now();
++    startClock();
++    voiceRef.current.speak(`What is ${problem.prompt}?`).catch(() => {});
++  }, [open, problem, startClock]);
++
++  // `session` bumps on every begin() so this re-runs on "Play again" even
++  // though status is already idle and the mode is already started.
++  const autoStart = useRef(false);
++  const [session, setSession] = useState(0);
++  const { status: recognitionStatus, start: startRecognition } = recognition;
++  useEffect(() => {
++    if (started && autoStart.current && recognitionStatus === "idle") {
++      autoStart.current = false;
++      startRecognition();
++    }
++  }, [started, session, recognitionStatus, startRecognition]);
++
++  function begin() {
++    round.restart();
++    recognition.reset();
++    setIndex(0);
++    setProblem(generateMathProblem(0));
++    setOutcomes([]);
++    setFeedback(null);
++    setHint(null);
++    autoStart.current = true;
++    setSession((n) => n + 1);
++    setStarted(true);
++  }
++
++  if (!round.profile) return <RequireProfile mode="Math mode" />;
++
++  if (round.result) {
+     return (
+-      <div className="mx-auto max-w-md px-4 py-16 text-center">
+-        <p className="text-slate-300">
+-          <Link to="/onboarding" className="text-violet-400 underline">
+-            Tell us your name
+-          </Link>{" "}
+-          before starting Math mode.
+-        </p>
++      <div className="px-4 py-16">
++        <RoundComplete result={round.result} stats={round.stats} profile={round.profile} saving={round.saving} onRetry={begin} />
+       </div>
+     );
+   }
+ 
+-  if (result) {
++  if (!started) {
+     return (
+-      <div className="px-4 py-16">
+-        <RoundComplete
+-          result={result}
+-          profile={profile}
+-          onRetry={() => {
+-            recognition.reset();
+-            setProblemIndex(0);
+-            setProblem(generateMathProblem());
+-            setCorrect(0);
+-            setFeedback(null);
+-            setResult(null);
+-            advancedForIndexRef.current = -1;
+-          }}
+-        />
++      <div className="mx-auto max-w-xl px-4 py-12 text-center">
++        <h1 className="text-3xl font-black">Math Mode</h1>
++        <p className="mt-2 text-slate-400">
++          {MATH_ROUND_LENGTH} problems, {MATH_PROBLEM_SECONDS} seconds each. Answer by signing the number in ASL, or tap the
++          mic and say it. Fast answers score more.
++        </p>
++        <Button onClick={begin} className="mt-8 py-5 text-lg">
++          Start
++        </Button>
+       </div>
+     );
+   }
+ 
+   return (
+-    <div className="mx-auto max-w-xl px-4 py-12 text-center">
+-      <p className="text-sm font-medium text-slate-400">
+-        Problem {problemIndex + 1} of {MATH_ROUND_LENGTH}
+-      </p>
+-      <h1 className="mt-2 text-4xl font-bold">{problem.prompt} = ?</h1>
+-
+-      <div className="mt-4">
+-        <RecognitionCamera videoRef={recognition.videoRef} canvasRef={recognition.canvasRef} />
+-      </div>
++    <div className="mx-auto max-w-xl space-y-4 px-4 py-8">
++      <ProgressDots total={MATH_ROUND_LENGTH} current={index} outcomes={outcomes} />
+ 
+-      {recognition.status === "idle" && (
+-        <Button className="mt-4" onClick={recognition.start}>
+-          Start camera
+-        </Button>
+-      )}
+-      {recognition.status === "error" && (
+-        <p className="mt-4 text-red-400" role="alert">
+-          {recognition.error}
+-        </p>
+-      )}
++      <MathProblemCard problem={problem} index={index} total={MATH_ROUND_LENGTH} feedback={feedback} hint={hint} />
+ 
+-      <p className="mt-4 text-slate-300">
+-        Sign the number, or tap the mic and say it. Recognized:{" "}
+-        <span className="font-mono">{recognition.current?.label ?? "—"}</span>
+-      </p>
++      <ScoreHud stats={round.stats} secondsLeft={open ? clock.secondsLeft : MATH_PROBLEM_SECONDS} />
+ 
+-      {feedback && (
+-        <p className="mt-4 text-violet-300" role="status">
+-          {feedback}
+-        </p>
+-      )}
++      <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
++        <CameraPanel recognition={recognition} target={target} flash={feedback?.kind ?? null} />
++        <div className="flex flex-col items-center gap-2 sm:pt-6">
++          <MicButton listen={voice.listen} isListening={voice.isListening} onResult={handleVoiceAnswer} />
++          <span className="text-xs text-slate-400">Say it</span>
++        </div>
++      </div>
+ 
+-      <div className="mt-8 flex flex-col items-center gap-4">
+-        <MicButton listen={voice.listen} isListening={voice.isListening} onResult={handleVoiceAnswer} />
++      <div className="flex items-center justify-between">
+         <Caption caption={voice.caption} isSpeaking={voice.isSpeaking} isListening={voice.isListening} />
++        <Button variant="ghost" onClick={() => settle(false, "Skipped")} disabled={!open} className="text-sm">
++          Skip
++        </Button>
+       </div>
+     </div>
+   );
+diff --git a/src/games/MathProblemCard.tsx b/src/games/MathProblemCard.tsx
+new file mode 100644
+index 0000000..0cb7dd0
+--- /dev/null
++++ b/src/games/MathProblemCard.tsx
+@@ -0,0 +1,33 @@
++// The "3 + 4 = ?" prompt for Math mode, tinted by the last outcome and
++// carrying the feedback / hint line so screen readers hear it in context.
++import type { MathProblem } from "./mathProblems";
++
++export type MathFeedback = { kind: "success" | "miss"; text: string };
++
++type MathProblemCardProps = {
++  problem: MathProblem;
++  index: number;
++  total: number;
++  feedback: MathFeedback | null;
++  hint: string | null;
++};
++
++export function MathProblemCard({ problem, index, total, feedback, hint }: MathProblemCardProps) {
++  const tone =
++    feedback?.kind === "success"
++      ? "border-emerald-400 bg-emerald-500/10"
++      : feedback?.kind === "miss"
++        ? "border-red-400 bg-red-500/10"
++        : "border-slate-800 bg-slate-900/60";
++  return (
++    <section aria-live="polite" className={`rounded-2xl border px-6 py-5 text-center transition-colors ${tone}`}>
++      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
++        Problem {index + 1} of {total}
++      </p>
++      <h1 className="mt-1 text-6xl font-black tracking-tight">{problem.prompt} = ?</h1>
++      <p className="mt-3 min-h-6 text-base text-slate-200" role="status">
++        {feedback ? feedback.text : (hint ?? "Sign the digit, or tap the mic and say it.")}
++      </p>
++    </section>
++  );
++}
+diff --git a/src/games/ProgressDots.tsx b/src/games/ProgressDots.tsx
+new file mode 100644
+index 0000000..377d1bf
+--- /dev/null
++++ b/src/games/ProgressDots.tsx
+@@ -0,0 +1,36 @@
++// Step indicator for fixed-length rounds (Lesson, Math): one dot per item,
++// coloured by outcome, with the current one pulsing.
++export type StepOutcome = "correct" | "miss";
++
++type ProgressDotsProps = {
++  total: number;
++  current: number;
++  outcomes: readonly StepOutcome[];
++};
++
++export function ProgressDots({ total, current, outcomes }: ProgressDotsProps) {
++  return (
++    <ol className="flex items-center justify-center gap-2" aria-label={`Step ${Math.min(current + 1, total)} of ${total}`}>
++      {Array.from({ length: total }, (_, i) => {
++        const outcome = outcomes[i];
++        const isCurrent = i === current;
++        const cls =
++          outcome === "correct"
++            ? "bg-emerald-400"
++            : outcome === "miss"
++              ? "bg-red-400"
++              : isCurrent
++                ? "bg-violet-400 animate-pulse ring-4 ring-violet-500/30"
++                : "bg-slate-700";
++        return (
++          <li
++            key={i}
++            className={`h-3 w-3 rounded-full transition-colors ${cls}`}
++            aria-current={isCurrent ? "step" : undefined}
++            aria-label={outcome ? `Step ${i + 1}: ${outcome}` : `Step ${i + 1}`}
++          />
++        );
++      })}
++    </ol>
++  );
++}
+diff --git a/src/games/README.md b/src/games/README.md
+new file mode 100644
+index 0000000..4199b12
+--- /dev/null
++++ b/src/games/README.md
+@@ -0,0 +1,56 @@
++# Games workstream (B)
++
++Owns `src/games/`. Three modes share one scoring engine, one round lifecycle,
++and one set of gameplay components, so they look and feel like the same game.
++
++## Play it
++
++- `/lesson` — pick Letters or Numbers, sign 5 targets. Each target shows the
++  handshape description + tip, live score/combo, the Gemini coaching line, and
++  the hold-to-confirm ring. Skip is always available so nothing dead-ends.
++- `/speed` — 3-2-1 countdown (camera warms up during it), then 45 s of prompts.
++  Points = (10 + speed bonus up to +10 within 6 s) × combo multiplier
++  (x1.5 at 3, x2 at 5, x3 at 10). Skip breaks the combo.
++- `/math` — 5 single-digit problems, 20 s each, difficulty ramps (+ → − → ×).
++  Answer by signing the digit (numbers vocabulary) or tapping the mic
++  (C's `MicButton` → `parseSpokenNumber`, homophones like "for"/"to" accepted).
++  Timeout or wrong spoken answer = miss with the correct answer shown.
++
++**No camera? Append `?mock=1`** to any mode URL (e.g. `/lesson?mock=1`). The
++mock recognizer is fed the current target so every prompt confirms after the
++normal 1 s hold — use it for demos on a laptop without a webcam and for UI work.
++
++## Files
++
++| File | Purpose |
++| --- | --- |
++| `scoring.ts` | Pure rules: combo multiplier, speed bonus, `recordRep`, XP, `buildRoundResult` (→ `RoundResult` from contracts). No React/browser imports. |
++| `gameLogic.ts` | Re-exports `scoring.ts` + `completeRound()` (XP → profile, streak bump, leaderboard post when verified). Never throws. |
++| `useRound.ts` | Profile + live `RoundStats` + finish-once semantics shared by all modes. |
++| `useGameRecognition.ts` | Switches between A's real hook and A's mock (`?mock=1`). |
++| `useCountdown.ts` | Wall-clock countdown (round timer, per-problem timer). |
++| `signCatalog.ts` | Confirmable signs (I L V W Y, 1–9) with handshape descriptions; shuffled `pickSigns`. |
++| `mathProblems.ts` | Single-digit problem generator with difficulty ramp; spoken-number parser. |
++| `CameraPanel.tsx` | Webcam + overlay + start/loading/error states + live guess + hold ring. |
++| `TargetCard.tsx`, `ScoreHud.tsx`, `ProgressDots.tsx`, `CoachLine.tsx`, `MathProblemCard.tsx`, `RoundComplete.tsx`, `RequireProfile.tsx` | Gameplay UI pieces. |
++| `tests/` | `node src/games/tests/run.mjs` — 11 tests over scoring, math, catalog. |
++
++## Checks
++
++```bash
++node src/games/tests/run.mjs
++npm run build
++npm run lint
++```
++
++## Integration notes for the team
++
++- **A (recognition):** we pass `target`, `vocabulary`, `coaching: true` (Lesson only)
++  and `onConfirm`. We call `reset()` on every new round and `stop()` when the
++  results screen shows. If you add word signs (THANK YOU), add them to
++  `signCatalog.ts` with a description and they'll appear in Lesson/Speed.
++- **C (voice):** prompts and results are read aloud via `useVoice().speak`
++  (captioned by `Caption`); Math voice answers go through `MicButton`.
++- **D (meta):** the only cross-folder writes are `completeRound()` →
++  `bumpStreak`, `saveLocalProfile`, `postScore` (verified users only). The
++  `RoundResult.xp` value is what gets added to the profile.
+diff --git a/src/games/RecognitionCamera.tsx b/src/games/RecognitionCamera.tsx
+index 533b21c..d98b899 100644
+--- a/src/games/RecognitionCamera.tsx
++++ b/src/games/RecognitionCamera.tsx
+@@ -1,19 +1,19 @@
+-// Shared webcam + hand-landmark overlay for any screen using
+-// recognition/useSignRecognition(). Markup matches
+-// src/recognition/README.md's integration example (mirrored video/canvas;
+-// classification itself uses unmirrored coordinates internally).
+-import type { RefObject } from "react";
+-
+-type RecognitionCameraProps = {
+-  videoRef: RefObject<HTMLVideoElement | null>;
+-  canvasRef: RefObject<HTMLCanvasElement | null>;
+-};
+-
+-export function RecognitionCamera({ videoRef, canvasRef }: RecognitionCameraProps) {
+-  return (
+-    <div className="relative mx-auto aspect-[4/3] max-w-md overflow-hidden rounded-xl bg-slate-950">
+-      <video ref={videoRef} muted playsInline className="h-full w-full -scale-x-100" />
+-      <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full -scale-x-100" />
+-    </div>
+-  );
+-}
++// Shared webcam + hand-landmark overlay for any screen using
++// recognition/useSignRecognition(). Markup matches
++// src/recognition/README.md's integration example (mirrored video/canvas;
++// classification itself uses unmirrored coordinates internally).
++import type { RefObject } from "react";
++
++type RecognitionCameraProps = {
++  videoRef: RefObject<HTMLVideoElement | null>;
++  canvasRef: RefObject<HTMLCanvasElement | null>;
++};
++
++export function RecognitionCamera({ videoRef, canvasRef }: RecognitionCameraProps) {
++  return (
++    <div className="relative mx-auto aspect-[4/3] max-w-md overflow-hidden rounded-xl bg-slate-950">
++      <video ref={videoRef} muted playsInline className="h-full w-full -scale-x-100" />
++      <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full -scale-x-100" />
++    </div>
++  );
++}
+diff --git a/src/games/RequireProfile.tsx b/src/games/RequireProfile.tsx
+new file mode 100644
+index 0000000..cb13f71
+--- /dev/null
++++ b/src/games/RequireProfile.tsx
+@@ -0,0 +1,16 @@
++// Every mode needs a local profile to award XP to. Shared gate so the
++// "tell us your name" nudge reads identically across Lesson/Speed/Math.
++import { Link } from "react-router-dom";
++
++export function RequireProfile({ mode }: { mode: string }) {
++  return (
++    <div className="mx-auto max-w-md px-4 py-16 text-center">
++      <p className="text-slate-300">
++        <Link to="/onboarding" className="text-violet-400 underline">
++          Tell us your name
++        </Link>{" "}
++        before starting {mode}.
++      </p>
++    </div>
++  );
++}
+diff --git a/src/games/RoundComplete.tsx b/src/games/RoundComplete.tsx
+index 2926740..995fcc2 100644
+--- a/src/games/RoundComplete.tsx
++++ b/src/games/RoundComplete.tsx
+@@ -1,32 +1,73 @@
+-// Shared end-of-round summary for all three modes: XP earned, updated
+-// totals, and a way to go again or check the leaderboard.
++// Shared end-of-round summary for all three modes: grade, score, accuracy,
++// best combo, XP earned, updated totals, and where to go next.
+ import { Link } from "react-router-dom";
+ import { Button } from "../components/ui/Button";
+ import { Card } from "../components/ui/Card";
+ import type { RoundResult, UserProfile } from "../lib/contracts";
++import { accuracy, gradeForAccuracy, type RoundStats } from "./scoring";
+ 
+ type RoundCompleteProps = {
+   result: RoundResult;
++  stats: RoundStats;
+   profile: UserProfile;
+   onRetry: () => void;
++  /** True while completeRound() is still syncing XP/streak. */
++  saving?: boolean;
+ };
+ 
+-export function RoundComplete({ result, profile, onRetry }: RoundCompleteProps) {
++const MODE_TITLES: Record<RoundResult["mode"], string> = {
++  lesson: "Lesson complete",
++  speed: "Time's up",
++  math: "Math round complete",
++};
++
++export function RoundComplete({ result, stats, profile, onRetry, saving = false }: RoundCompleteProps) {
++  const pct = accuracy(result);
+   return (
+     <Card className="mx-auto max-w-md text-center">
+-      <h2 className="text-xl font-bold">Round complete!</h2>
+-      <p className="mt-2 text-slate-300">
+-        {result.correct} / {result.total} correct — +{result.xp} XP
++      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{MODE_TITLES[result.mode]}</p>
++      <h2 className="mt-1 text-3xl font-black">{gradeForAccuracy(pct)}</h2>
++
++      <dl className="mt-6 grid grid-cols-3 gap-2">
++        <Metric label="Score" value={result.score} />
++        <Metric label="Accuracy" value={`${Math.round(pct * 100)}%`} hint={`${result.correct}/${result.total}`} />
++        <Metric label="Best combo" value={stats.bestCombo} />
++      </dl>
++
++      <p className="mt-6 text-2xl font-bold text-violet-300" aria-live="polite">
++        +{result.xp} XP
+       </p>
+       <p className="mt-1 text-sm text-slate-400">
+-        Level {profile.level} · {profile.xp} XP total · 🔥 {profile.streak} day streak
++        {saving ? (
++          "Saving your progress…"
++        ) : (
++          <>
++            Level {profile.level} · {profile.xp} XP total · 🔥 {profile.streak} day streak
++          </>
++        )}
+       </p>
+-      <div className="mt-6 flex justify-center gap-3">
+-        <Button onClick={onRetry}>Do it again</Button>
++
++      <div className="mt-6 flex flex-wrap justify-center gap-3">
++        <Button onClick={onRetry} autoFocus>
++          Play again
++        </Button>
++        <Link to="/">
++          <Button variant="secondary">Choose a mode</Button>
++        </Link>
+         <Link to="/leaderboard">
+-          <Button variant="secondary">View leaderboard</Button>
++          <Button variant="ghost">Leaderboard</Button>
+         </Link>
+       </div>
+     </Card>
+   );
+ }
++
++function Metric({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
++  return (
++    <div className="rounded-xl bg-slate-800/60 px-2 py-3">
++      <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</dt>
++      <dd className="text-xl font-bold tabular-nums">{value}</dd>
++      {hint && <dd className="text-[11px] text-slate-500">{hint}</dd>}
++    </div>
++  );
++}
+diff --git a/src/games/ScoreHud.tsx b/src/games/ScoreHud.tsx
+new file mode 100644
+index 0000000..d15a668
+--- /dev/null
++++ b/src/games/ScoreHud.tsx
+@@ -0,0 +1,73 @@
++// Live in-round numbers: score, combo/multiplier, optional countdown, and a
++// floating "+N" whenever a rep lands. One component so all modes feel alike.
++import { useEffect, useState, type ReactNode } from "react";
++import { comboMultiplier, repsToNextTier, type RoundStats } from "./scoring";
++
++type ScoreHudProps = {
++  stats: RoundStats;
++  /** Seconds left; omit for untimed modes. */
++  secondsLeft?: number;
++  /** Tints the timer once it drops to this many seconds. */
++  urgentAt?: number;
++};
++
++export function ScoreHud({ stats, secondsLeft, urgentAt = 5 }: ScoreHudProps) {
++  const multiplier = comboMultiplier(stats.combo);
++  const toNext = repsToNextTier(stats.combo);
++  // Each rep produces a new (total, score) pair; show its gain until dismissed.
++  const popupKey = `${stats.total}:${stats.score}`;
++  const [dismissedKey, setDismissedKey] = useState("");
++  const popup = stats.lastPoints > 0 && popupKey !== dismissedKey ? { points: stats.lastPoints, key: popupKey } : null;
++  const visibleKey = popup?.key ?? null;
++  useEffect(() => {
++    if (visibleKey === null) return;
++    const id = setTimeout(() => setDismissedKey(visibleKey), 900);
++    return () => clearTimeout(id);
++  }, [visibleKey]);
++
++  return (
++    <div className="grid grid-cols-3 gap-2 text-center" aria-label="Score">
++      <Stat label="Score">
++        <span className="relative inline-block">
++          {stats.score}
++          {popup && (
++            <span
++              key={popup.key}
++              className="absolute -right-10 top-1 animate-bounce text-sm font-bold text-emerald-300"
++              aria-live="polite"
++            >
++              +{popup.points}
++            </span>
++          )}
++        </span>
++      </Stat>
++      <Stat label="Combo" hint={toNext ? `${toNext} more for x${comboMultiplier(stats.combo + toNext)}` : "max!"}>
++        <span className={stats.combo >= 3 ? "text-amber-300" : ""}>
++          {stats.combo}
++          <span className="ml-1 text-sm font-semibold text-slate-400">x{multiplier}</span>
++        </span>
++      </Stat>
++      {secondsLeft === undefined ? (
++        <Stat label="Correct">
++          {stats.correct}/{stats.total}
++        </Stat>
++      ) : (
++        <Stat label="Time">
++          <span className={secondsLeft <= urgentAt ? "text-red-400" : ""} role="timer" aria-live="off">
++            {secondsLeft}s
++          </span>
++        </Stat>
++      )}
++    </div>
++  );
++}
++
++function Stat({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
++  return (
++    <div className="rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2">
++      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
++      <p className="text-2xl font-bold tabular-nums">{children}</p>
++      {hint && <p className="text-[11px] text-slate-500">{hint}</p>}
++    </div>
++  );
++}
+diff --git a/src/games/SpeedChallenge.tsx b/src/games/SpeedChallenge.tsx
+index 8e49f20..f94d635 100644
+--- a/src/games/SpeedChallenge.tsx
++++ b/src/games/SpeedChallenge.tsx
+@@ -1,143 +1,146 @@
+-// Speed Challenge: a timed run of signs. Correct reps score points that
+-// scale up with an in-round combo streak; no coaching/voice here, this
+-// mode is about pace. Recognition owns hold-to-confirm internally.
++// Speed Challenge: sign as many prompts as you can before the clock runs
++// out. Each rep scores (base + speed bonus) × combo multiplier — see
++// scoring.ts. A skip breaks the combo. No coaching or voice here: it's about
++// pace, and the camera loop is already the hot path.
+ import { useEffect, useRef, useState } from "react";
+-import { Link } from "react-router-dom";
+ import { Button } from "../components/ui/Button";
+-import { useSignRecognition } from "../recognition/useSignRecognition";
+-import type { RoundResult, UserProfile } from "../lib/contracts";
+-import { getLocalProfile } from "../lib/localProfile";
+-import { completeRound, pointsForRep, scoreRound, SPEED_CHALLENGE_SECONDS } from "./gameLogic";
+-import { RecognitionCamera } from "./RecognitionCamera";
++import { CameraPanel } from "./CameraPanel";
++import { SPEED_BONUS_MAX, SPEED_BONUS_WINDOW_MS, SPEED_CHALLENGE_SECONDS } from "./gameLogic";
++import { RequireProfile } from "./RequireProfile";
+ import { RoundComplete } from "./RoundComplete";
+-import { LETTER_CATALOG } from "./signCatalog";
++import { ScoreHud } from "./ScoreHud";
++import { LETTER_CATALOG, NUMBER_CATALOG, pickSigns } from "./signCatalog";
++import { TargetCard } from "./TargetCard";
++import { useCountdown } from "./useCountdown";
++import { useGameRecognition } from "./useGameRecognition";
++import { useRound } from "./useRound";
+ 
+-export function SpeedChallenge() {
+-  const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
+-  const [started, setStarted] = useState(false);
+-  const [timeLeft, setTimeLeft] = useState(SPEED_CHALLENGE_SECONDS);
+-  const [counter, setCounter] = useState(0);
+-  const [comboStreak, setComboStreak] = useState(0);
+-  const [matches, setMatches] = useState(0);
+-  const [score, setScore] = useState(0);
+-  const [result, setResult] = useState<RoundResult | null>(null);
++type SignSet = "letters" | "numbers";
++type Phase = "setup" | "ready" | "playing";
++const READY_SECONDS = 3;
++const QUEUE_LENGTH = 80; // more prompts than anyone can clear in one round
+ 
+-  const target = LETTER_CATALOG[counter % LETTER_CATALOG.length];
++export function SpeedChallenge() {
++  const round = useRound("speed");
++  const [signSet, setSignSet] = useState<SignSet>("letters");
++  const [phase, setPhase] = useState<Phase>("setup");
++  const [queue, setQueue] = useState<string[]>([]);
++  const [position, setPosition] = useState(0);
++  const [flash, setFlash] = useState<"success" | "miss" | null>(null);
++  const promptShownAt = useRef(0);
+ 
+-  function handleConfirm() {
+-    setMatches((m) => m + 1);
+-    setScore((s) => s + pointsForRep(comboStreak));
+-    setComboStreak((c) => c + 1);
+-    setCounter((c) => c + 1);
+-  }
++  const playing = phase === "playing" && !round.result;
++  const target = playing ? queue[position] : undefined;
+ 
+-  const recognition = useSignRecognition({
+-    target: started ? target : undefined,
+-    vocabulary: "letters",
+-    onConfirm: handleConfirm,
+-  });
++  const recognition = useGameRecognition({ target, vocabulary: signSet, onConfirm: () => settle(true) });
+   const recognitionRef = useRef(recognition);
+   useEffect(() => {
+     recognitionRef.current = recognition;
+   });
+ 
+-  useEffect(() => {
+-    if (!started || timeLeft <= 0) return;
+-    const id = setInterval(() => setTimeLeft((t) => t - 1), 1000);
+-    return () => clearInterval(id);
+-  }, [started, timeLeft]);
++  const clock = useCountdown(SPEED_CHALLENGE_SECONDS, () => {
++    recognitionRef.current.stop();
++    round.finish();
++  });
++  const ready = useCountdown(READY_SECONDS, () => {
++    promptShownAt.current = performance.now();
++    setPhase("playing");
++    clock.start();
++  });
+ 
++  function settle(wasCorrect: boolean) {
++    if (!playing) return;
++    const elapsed = performance.now() - promptShownAt.current;
++    round.record(wasCorrect, wasCorrect ? elapsed : undefined);
++    setFlash(wasCorrect ? "success" : "miss");
++    setTimeout(() => setFlash(null), 350);
++    promptShownAt.current = performance.now();
++    setPosition((p) => p + 1);
++  }
++
++  // Warm up camera + model during the 3-2-1 so the first prompt is instantly scorable.
++  // `session` bumps on every begin() so this re-runs on "Play again" even
++  // though status is already idle and the mode is already started.
++  const autoStart = useRef(false);
++  const [session, setSession] = useState(0);
++  const { status: recognitionStatus, start: startRecognition } = recognition;
+   useEffect(() => {
+-    if (!started || timeLeft > 0 || !profile || result) return;
+-    recognitionRef.current.stop();
+-    const roundResult = scoreRound("speed", matches, matches, score);
+-    setResult(roundResult);
+-    void completeRound(profile, roundResult).then(setProfile);
+-  }, [started, timeLeft, profile, result, matches, score]);
++    if (phase === "ready" && autoStart.current && recognitionStatus === "idle") {
++      autoStart.current = false;
++      startRecognition();
++    }
++  }, [phase, session, recognitionStatus, startRecognition]);
+ 
+-  if (!profile) {
+-    return (
+-      <div className="mx-auto max-w-md px-4 py-16 text-center">
+-        <p className="text-slate-300">
+-          <Link to="/onboarding" className="text-violet-400 underline">
+-            Tell us your name
+-          </Link>{" "}
+-          before starting a challenge.
+-        </p>
+-      </div>
+-    );
++  function begin(set: SignSet) {
++    setSignSet(set);
++    setQueue(pickSigns(QUEUE_LENGTH, set === "letters" ? LETTER_CATALOG : NUMBER_CATALOG));
++    setPosition(0);
++    setFlash(null);
++    round.restart();
++    recognition.reset();
++    clock.reset();
++    autoStart.current = true;
++    setSession((n) => n + 1);
++    setPhase("ready");
++    ready.start();
+   }
+ 
+-  if (result) {
++  if (!round.profile) return <RequireProfile mode="a challenge" />;
++
++  if (round.result) {
+     return (
+       <div className="px-4 py-16">
+         <RoundComplete
+-          result={result}
+-          profile={profile}
+-          onRetry={() => {
+-            recognition.reset();
+-            setStarted(false);
+-            setTimeLeft(SPEED_CHALLENGE_SECONDS);
+-            setCounter(0);
+-            setComboStreak(0);
+-            setMatches(0);
+-            setScore(0);
+-            setResult(null);
+-          }}
++          result={round.result}
++          stats={round.stats}
++          profile={round.profile}
++          saving={round.saving}
++          onRetry={() => begin(signSet)}
+         />
+       </div>
+     );
+   }
+ 
++  if (phase === "setup") {
++    return (
++      <div className="mx-auto max-w-xl px-4 py-12 text-center">
++        <h1 className="text-3xl font-black">Speed Challenge</h1>
++        <p className="mt-2 text-slate-400">
++          {SPEED_CHALLENGE_SECONDS} seconds on the clock. Every rep is worth 10, plus up to +{SPEED_BONUS_MAX} if you
++          land it within {SPEED_BONUS_WINDOW_MS / 1000}s. Chain 3, 5, and 10 in a row for x1.5, x2, and x3.
++        </p>
++        <div className="mt-8 grid gap-3 sm:grid-cols-2">
++          <Button onClick={() => begin("letters")} className="py-5 text-lg">
++            Letters
++            <span className="block text-xs font-normal opacity-80">{LETTER_CATALOG.join(" · ")}</span>
++          </Button>
++          <Button variant="secondary" onClick={() => begin("numbers")} className="py-5 text-lg">
++            Numbers
++            <span className="block text-xs font-normal opacity-80">1 – 9</span>
++          </Button>
++        </div>
++      </div>
++    );
++  }
++
+   return (
+-    <div className="mx-auto max-w-xl px-4 py-12 text-center">
+-      {started ? (
+-        <>
+-          <p className="text-sm font-medium text-slate-400">{timeLeft}s left</p>
+-          <h1 className="mt-2 text-4xl font-bold">{target}</h1>
+-        </>
++    <div className="mx-auto max-w-xl space-y-4 px-4 py-8">
++      {phase === "ready" ? (
++        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 py-6 text-center" role="status" aria-live="assertive">
++          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Get ready</p>
++          <p className="text-7xl font-black tabular-nums">{ready.secondsLeft || "Go!"}</p>
++        </div>
+       ) : (
+-        <>
+-          <h1 className="text-2xl font-bold">Speed Challenge</h1>
+-          <p className="mt-2 text-slate-400">
+-            Sign as many prompts as you can in {SPEED_CHALLENGE_SECONDS} seconds. Combos of
+-            3+ and 5+ score more per rep.
+-          </p>
+-        </>
++        <TargetCard label={queue[position]} eyebrow={`Prompt ${position + 1}`} compact celebrate={flash === "success"} />
+       )}
+-
+-      <div className="mt-4">
+-        <RecognitionCamera videoRef={recognition.videoRef} canvasRef={recognition.canvasRef} />
+-      </div>
+-
+-      {!started && (
+-        <Button
+-          className="mt-4"
+-          onClick={() => {
+-            setStarted(true);
+-            recognition.start();
+-          }}
+-        >
+-          Start
++      <ScoreHud stats={round.stats} secondsLeft={phase === "ready" ? SPEED_CHALLENGE_SECONDS : clock.secondsLeft} />
++      <CameraPanel recognition={recognition} target={target} flash={flash} />
++      <div className="flex items-center justify-between text-sm text-slate-400">
++        <span>Release your hand between reps so the next one can confirm.</span>
++        <Button variant="ghost" onClick={() => settle(false)} disabled={!playing} className="text-sm">
++          Skip (breaks combo)
+         </Button>
+-      )}
+-      {started && recognition.status === "loading" && <p className="mt-4 text-slate-400">Starting camera…</p>}
+-      {recognition.status === "error" && (
+-        <p className="mt-4 text-red-400" role="alert">
+-          {recognition.error}
+-        </p>
+-      )}
+-
+-      {started && (
+-        <>
+-          <p className="mt-4 text-slate-300">
+-            Recognized: <span className="font-mono">{recognition.current?.label ?? "—"}</span>
+-          </p>
+-          <p className="mt-1 text-sm text-slate-400">
+-            Combo: {comboStreak} · Score: {score}
+-          </p>
+-        </>
+-      )}
++      </div>
+     </div>
+   );
+ }
+diff --git a/src/games/TargetCard.tsx b/src/games/TargetCard.tsx
+new file mode 100644
+index 0000000..f164f4e
+--- /dev/null
++++ b/src/games/TargetCard.tsx
+@@ -0,0 +1,44 @@
++// The "sign this" prompt: big label, plain-language handshape, and a tip.
++// Until we have sign illustrations the description is the reference image.
++import { describeSign } from "./signCatalog";
++
++type TargetCardProps = {
++  label: string;
++  /** Header line above the label, e.g. "Sign 2 of 5". */
++  eyebrow?: string;
++  /** Hide the description (Speed Challenge shows only the label to keep pace). */
++  compact?: boolean;
++  /** Briefly restyles the card after a confirmed rep. */
++  celebrate?: boolean;
++};
++
++export function TargetCard({ label, eyebrow, compact = false, celebrate = false }: TargetCardProps) {
++  const sign = describeSign(label);
++  return (
++    <section
++      aria-live="polite"
++      className={`rounded-2xl border px-6 py-5 text-center transition-colors ${
++        celebrate ? "border-emerald-400 bg-emerald-500/10" : "border-slate-800 bg-slate-900/60"
++      }`}
++    >
++      {eyebrow && <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{eyebrow}</p>}
++      <div className="mt-1 flex items-center justify-center gap-4">
++        <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-medium uppercase text-slate-300">
++          {sign.kind}
++        </span>
++        <h1 className="text-6xl font-black leading-none tracking-tight">{sign.label}</h1>
++        {sign.glyph && (
++          <span className="text-4xl" aria-hidden="true">
++            {sign.glyph}
++          </span>
++        )}
++      </div>
++      {!compact && (
++        <>
++          <p className="mt-4 text-base text-slate-200">{sign.description}</p>
++          <p className="mt-1 text-sm text-slate-400">Tip: {sign.tip}</p>
++        </>
++      )}
++    </section>
++  );
++}
+diff --git a/src/games/gameLogic.ts b/src/games/gameLogic.ts
+index a4feee7..dd310c7 100644
+--- a/src/games/gameLogic.ts
++++ b/src/games/gameLogic.ts
+@@ -1,43 +1,40 @@
+-// Scoring, in-round combo, and XP awarded per mode — plus completeRound(),
+-// the one place all three modes apply a finished round to the profile,
+-// streak, and (if verified) the leaderboard, so that logic isn't
+-// duplicated three times.
+-import type { GameMode, RoundResult, UserProfile } from "../lib/contracts";
++// Public scoring surface for src/games/ plus completeRound(), the one place
++// all three modes apply a finished round to the profile, streak, and (if
++// verified) the leaderboard. The pure rules live in scoring.ts so they can
++// be unit-tested in Node without React or Supabase.
++import type { RoundResult, UserProfile } from "../lib/contracts";
+ import { bumpStreak, postScore } from "../lib/supabase";
+ import { saveLocalProfile } from "../lib/localProfile";
+ import { levelForXp } from "../meta/StreakXp";
+ 
+-export const LESSON_LENGTH = 5;
+-export const MATH_ROUND_LENGTH = 5;
+-export const SPEED_CHALLENGE_SECONDS = 30;
+-
+-/** Points for one correct rep; a combo streak of 3+ pays more. */
+-export function pointsForRep(comboStreak: number): number {
+-  if (comboStreak >= 5) return 30;
+-  if (comboStreak >= 3) return 20;
+-  return 10;
+-}
+-
+-export function scoreRound(mode: GameMode, correct: number, total: number, score?: number): RoundResult {
+-  return { mode, score: score ?? correct * 10, correct, total, xp: correct * 5 };
+-}
++export * from "./scoring";
+ 
+ /** Awards a finished round's XP, bumps the daily streak, saves the profile
+- * locally, and (once verified) pushes the new total to the leaderboard. */
++ * locally, and (once verified) pushes the new total to the leaderboard.
++ * Never throws: a flaky network must not eat the player's results screen. */
+ export async function completeRound(profile: UserProfile, result: RoundResult): Promise<UserProfile> {
+   const xp = profile.xp + result.xp;
+-  const streak = await bumpStreak(profile.id);
++  let streak = profile.streak;
++  try {
++    streak = await bumpStreak(profile.id);
++  } catch {
++    // keep the local streak; the next successful round will resync
++  }
+   const updated: UserProfile = { ...profile, xp, streak, level: levelForXp(xp) };
+   saveLocalProfile(updated);
+ 
+   if (updated.verified) {
+-    await postScore({
+-      userId: updated.id,
+-      name: updated.name,
+-      xp: updated.xp,
+-      verified: updated.verified,
+-      updatedAt: new Date().toISOString(),
+-    });
++    try {
++      await postScore({
++        userId: updated.id,
++        name: updated.name,
++        xp: updated.xp,
++        verified: updated.verified,
++        updatedAt: new Date().toISOString(),
++      });
++    } catch {
++      // leaderboard post failed; local progress is already saved
++    }
+   }
+ 
+   return updated;
+diff --git a/src/games/mathProblems.ts b/src/games/mathProblems.ts
+index 32f4b3f..9579016 100644
+--- a/src/games/mathProblems.ts
++++ b/src/games/mathProblems.ts
+@@ -1,33 +1,51 @@
+-// Single-digit arithmetic so the answer is always signable (0-9) or
+-// speakable as one word — matches the recognition MVP's number scope.
+-export type MathProblem = { prompt: string; answer: number };
++// Arithmetic whose answer is always a single digit 0-9, so it can be signed
++// with the recognition MVP's number vocabulary or spoken as one word.
++export type MathOp = "+" | "−" | "×";
++export type MathProblem = { prompt: string; answer: number; op: MathOp };
+ 
+-export function generateMathProblem(): MathProblem {
+-  const a = Math.floor(Math.random() * 6) + 1; // 1..6
+-  const b = Math.floor(Math.random() * (10 - a)); // a+b stays <= 9
+-  if (Math.random() < 0.5 && a >= b) {
+-    return { prompt: `${a} − ${b}`, answer: a - b };
++function randomInt(min: number, max: number): number {
++  return Math.floor(Math.random() * (max - min + 1)) + min;
++}
++
++/** Problems get harder as the round goes on: + first, then −, then ×.
++ * Answers are kept in 1-9 because 0 is the least reliable digit to recognize. */
++export function generateMathProblem(index = 0, random = Math.random): MathProblem {
++  const pick = random();
++  const op: MathOp = index < 2 ? "+" : index < 4 ? (pick < 0.5 ? "+" : "−") : pick < 0.4 ? "×" : "−";
++
++  if (op === "×") {
++    const a = randomInt(1, 3);
++    const b = randomInt(1, Math.floor(9 / a));
++    return { prompt: `${a} × ${b}`, answer: a * b, op };
++  }
++  if (op === "−") {
++    const a = randomInt(2, 9);
++    const b = randomInt(1, a - 1);
++    return { prompt: `${a} − ${b}`, answer: a - b, op };
+   }
+-  return { prompt: `${a} + ${b}`, answer: a + b };
++  const a = randomInt(1, 8);
++  const b = randomInt(1, 9 - a);
++  return { prompt: `${a} + ${b}`, answer: a + b, op };
+ }
+ 
+ const NUMBER_WORDS: Record<string, number> = {
+-  zero: 0,
+-  one: 1,
+-  two: 2,
+-  three: 3,
+-  four: 4,
++  zero: 0, oh: 0,
++  one: 1, won: 1,
++  two: 2, to: 2, too: 2,
++  three: 3, tree: 3,
++  four: 4, for: 4, fore: 4,
+   five: 5,
+-  six: 6,
++  six: 6, sex: 6,
+   seven: 7,
+-  eight: 8,
++  eight: 8, ate: 8,
+   nine: 9,
+ };
+ 
+-/** Pulls a single digit out of a spoken transcript ("five", "It's 5") or
+- * returns null if none is found. */
++/** Pulls a single digit out of a spoken transcript ("five", "It's 5",
++ * "the answer is four") or returns null if none is found. Homophones are
++ * accepted because STT frequently returns "to"/"for" for two/four. */
+ export function parseSpokenNumber(transcript: string): number | null {
+-  const cleaned = transcript.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "");
++  const cleaned = transcript.trim().toLowerCase().replace(/[^a-z0-9\s]/g, " ");
+   const digitMatch = cleaned.match(/\d+/);
+   if (digitMatch) return Number(digitMatch[0]);
+   for (const word of cleaned.split(/\s+/)) {
+diff --git a/src/games/scoring.ts b/src/games/scoring.ts
+new file mode 100644
+index 0000000..09d826b
+--- /dev/null
++++ b/src/games/scoring.ts
+@@ -0,0 +1,119 @@
++// Pure scoring rules shared by all three modes. No React, no browser APIs,
++// so src/games/tests can exercise every rule in Node. gameLogic.ts re-exports
++// this and adds the side-effecting completeRound().
++import type { GameMode, RoundResult } from "../lib/contracts";
++
++export const LESSON_LENGTH = 5;
++export const MATH_ROUND_LENGTH = 5;
++export const SPEED_CHALLENGE_SECONDS = 45;
++/** Seconds a Math problem stays open before it counts as a miss. */
++export const MATH_PROBLEM_SECONDS = 20;
++
++export const BASE_POINTS = 10;
++/** A rep confirmed within this window of the prompt appearing earns a speed bonus. */
++export const SPEED_BONUS_WINDOW_MS = 6000;
++export const SPEED_BONUS_MAX = 10;
++
++/** Consecutive-correct thresholds → multiplier. Displayed as "x1.5" etc. */
++export const COMBO_TIERS: readonly { atLeast: number; multiplier: number }[] = [
++  { atLeast: 10, multiplier: 3 },
++  { atLeast: 5, multiplier: 2 },
++  { atLeast: 3, multiplier: 1.5 },
++  { atLeast: 0, multiplier: 1 },
++];
++
++/** Multiplier for the NEXT rep given how many correct reps are already chained. */
++export function comboMultiplier(combo: number): number {
++  const tier = COMBO_TIERS.find((t) => combo >= t.atLeast);
++  return tier ? tier.multiplier : 1;
++}
++
++/** Reps until the next multiplier tier, or null when maxed — drives the HUD nudge. */
++export function repsToNextTier(combo: number): number | null {
++  const next = [...COMBO_TIERS].reverse().find((t) => t.atLeast > combo);
++  return next ? next.atLeast - combo : null;
++}
++
++/** Linear decay from SPEED_BONUS_MAX at 0 ms to 0 at the window edge. */
++export function speedBonus(elapsedMs: number, windowMs = SPEED_BONUS_WINDOW_MS): number {
++  if (!Number.isFinite(elapsedMs) || elapsedMs < 0) return 0;
++  const remaining = Math.max(0, 1 - elapsedMs / windowMs);
++  return Math.round(SPEED_BONUS_MAX * remaining);
++}
++
++export type RepInput = {
++  /** Correct reps already chained before this one. */
++  combo: number;
++  /** Time from prompt shown to rep confirmed; omit in untimed modes. */
++  elapsedMs?: number;
++};
++
++/** Points for one correct rep: (base + speed bonus) × combo multiplier. */
++export function pointsForRep({ combo, elapsedMs }: RepInput): number {
++  const bonus = elapsedMs === undefined ? 0 : speedBonus(elapsedMs);
++  return Math.round((BASE_POINTS + bonus) * comboMultiplier(combo));
++}
++
++/** Everything a round tracks while it's running. Immutable — recordRep returns a copy. */
++export type RoundStats = {
++  correct: number;
++  total: number;
++  score: number;
++  combo: number;
++  bestCombo: number;
++  lastPoints: number;
++};
++
++export function createRoundStats(): RoundStats {
++  return { correct: 0, total: 0, score: 0, combo: 0, bestCombo: 0, lastPoints: 0 };
++}
++
++/** Apply one attempt. A miss (skip, timeout, wrong answer) breaks the combo. */
++export function recordRep(stats: RoundStats, wasCorrect: boolean, elapsedMs?: number): RoundStats {
++  if (!wasCorrect) {
++    return { ...stats, total: stats.total + 1, combo: 0, lastPoints: 0 };
++  }
++  const points = pointsForRep({ combo: stats.combo, elapsedMs });
++  const combo = stats.combo + 1;
++  return {
++    correct: stats.correct + 1,
++    total: stats.total + 1,
++    score: stats.score + points,
++    combo,
++    bestCombo: Math.max(stats.bestCombo, combo),
++    lastPoints: points,
++  };
++}
++
++export function accuracy(stats: Pick<RoundStats, "correct" | "total">): number {
++  return stats.total === 0 ? 0 : stats.correct / stats.total;
++}
++
++/** XP is the cross-mode currency: 5 per correct rep, +10 for a perfect round,
++ * and Speed Challenge also converts score so a long fast run outranks a
++ * short perfect one. */
++export function xpForRound(mode: GameMode, stats: RoundStats): number {
++  let xp = stats.correct * 5;
++  if (stats.total > 0 && stats.correct === stats.total) xp += 10;
++  if (mode === "speed") xp += Math.floor(stats.score / 20);
++  return xp;
++}
++
++/** The only place a RoundResult (contracts.ts) is assembled. */
++export function buildRoundResult(mode: GameMode, stats: RoundStats): RoundResult {
++  return {
++    mode,
++    score: stats.score,
++    correct: stats.correct,
++    total: stats.total,
++    xp: xpForRound(mode, stats),
++  };
++}
++
++/** Short verdict for the results screen. */
++export function gradeForAccuracy(pct: number): string {
++  if (pct >= 1) return "Perfect!";
++  if (pct >= 0.8) return "Great job";
++  if (pct >= 0.5) return "Getting there";
++  return "Keep practicing";
++}
+diff --git a/src/games/signCatalog.ts b/src/games/signCatalog.ts
+index 7ec7da5..a69ab11 100644
+--- a/src/games/signCatalog.ts
++++ b/src/games/signCatalog.ts
+@@ -1,17 +1,72 @@
+-// MVP sign catalogs Lesson/Speed Challenge draw prompts from. Recognition's
+-// real classifier (src/recognition/signClassifier.ts) only reliably confirms
+-// the letters I, L, V, W, Y and digits 0-9 today — other letters exist but
+-// score below the confirmation threshold on purpose, and word signs like
+-// "THANK YOU" exist in the mock only (see src/recognition/README.md).
+-// CLAUDE.md's golden demo line ("sign THANK YOU") isn't achievable with the
+-// real recognizer yet; these catalogs stick to what can actually confirm.
++// MVP sign catalog: what Lesson and Speed Challenge prompt for, plus a plain
++// handshape description shown next to each target (we have no sign images
++// yet — the description IS the "target sign" for now).
++//
++// Recognition's classifier (src/recognition/signClassifier.ts) only reliably
++// confirms letters I, L, V, W, Y and digits 1-9 today; every other letter
++// scores below its 0.8 threshold on purpose. Stick to what can confirm —
++// a confident demo of 10 signs beats a flaky demo of 40 (PLAN.md risk #1).
++export type SignKind = "letter" | "number";
++
++export type SignInfo = {
++  label: string;
++  kind: SignKind;
++  /** One-sentence handshape, in the order a beginner would form it. */
++  description: string;
++  /** The single most common mistake, phrased as what to do instead. */
++  tip: string;
++  /** Emoji only where one actually matches the handshape. */
++  glyph?: string;
++};
++
++export const SIGNS: Record<string, SignInfo> = {
++  I: { label: "I", kind: "letter", description: "Make a fist, then raise only your pinky.", tip: "Keep your thumb tucked across your folded fingers." },
++  L: { label: "L", kind: "letter", description: "Point your index finger up and stick your thumb out to the side.", tip: "The index and thumb should form a clean right angle." },
++  V: { label: "V", kind: "letter", description: "Raise your index and middle fingers, spread apart.", tip: "Fold ring and pinky down and hold them with your thumb.", glyph: "✌️" },
++  W: { label: "W", kind: "letter", description: "Raise index, middle, and ring fingers, spread apart.", tip: "Pin your pinky down with your thumb." },
++  Y: { label: "Y", kind: "letter", description: "Stick out your thumb and pinky; fold the middle three fingers.", tip: "Think 'hang loose' — keep the three middle fingers tight.", glyph: "🤙" },
++  "1": { label: "1", kind: "number", description: "Point your index finger up; fold the rest.", tip: "Keep the thumb resting across your folded fingers, not out.", glyph: "☝️" },
++  "2": { label: "2", kind: "number", description: "Raise index and middle fingers, spread apart.", tip: "Same shape as V — thumb stays tucked.", glyph: "✌️" },
++  "3": { label: "3", kind: "number", description: "Raise index and middle fingers AND stick your thumb out.", tip: "Ring and pinky stay folded; the thumb is what makes it a 3." },
++  "4": { label: "4", kind: "number", description: "Raise all four fingers, spread; tuck the thumb across the palm.", tip: "If the thumb pokes out it reads as 5." },
++  "5": { label: "5", kind: "number", description: "Open hand, all five fingers spread wide.", tip: "Face your palm toward the camera.", glyph: "🖐️" },
++  "6": { label: "6", kind: "number", description: "Touch your thumb to your pinky tip; keep the other three fingers up.", tip: "Only the pinky bends — index, middle, ring stay straight." },
++  "7": { label: "7", kind: "number", description: "Touch your thumb to your ring finger tip; other fingers up.", tip: "Index, middle, and pinky stay straight and spread." },
++  "8": { label: "8", kind: "number", description: "Touch your thumb to your middle finger tip; other fingers up.", tip: "Index, ring, and pinky stay straight." },
++  "9": { label: "9", kind: "number", description: "Touch your thumb to your index finger tip; other fingers up.", tip: "Like an 'OK' sign with the three free fingers spread.", glyph: "👌" },
++};
++
+ export const LETTER_CATALOG = ["I", "L", "V", "W", "Y"] as const;
+ export const NUMBER_CATALOG = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
+ 
+-export function pickSigns(count: number, catalog: readonly string[] = LETTER_CATALOG): string[] {
++export function describeSign(label: string): SignInfo {
++  return (
++    SIGNS[label] ?? {
++      label,
++      kind: /^\d$/.test(label) ? "number" : "letter",
++      description: `Sign ${label}.`,
++      tip: "Hold the shape steady for one second.",
++    }
++  );
++}
++
++/** Shuffled picks with no immediate repeats, cycling through fresh shuffles
++ * when count exceeds the catalog. `random` is injectable for tests. */
++export function pickSigns(count: number, catalog: readonly string[] = LETTER_CATALOG, random = Math.random): string[] {
+   const picks: string[] = [];
+-  for (let i = 0; i < count; i++) {
+-    picks.push(catalog[i % catalog.length]);
++  while (picks.length < count) {
++    const bag = shuffle([...catalog], random);
++    // Avoid the seam repeat where one bag ends with the sign the next starts with.
++    if (bag.length > 1 && picks.length && bag[0] === picks[picks.length - 1]) bag.push(bag.shift() as string);
++    picks.push(...bag);
++  }
++  return picks.slice(0, count);
++}
++
++function shuffle<T>(items: T[], random: () => number): T[] {
++  for (let i = items.length - 1; i > 0; i--) {
++    const j = Math.floor(random() * (i + 1));
++    [items[i], items[j]] = [items[j], items[i]];
+   }
+-  return picks;
++  return items;
+ }
+diff --git a/src/games/tests/games.test.ts b/src/games/tests/games.test.ts
+new file mode 100644
+index 0000000..7bd2cae
+--- /dev/null
++++ b/src/games/tests/games.test.ts
+@@ -0,0 +1,133 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import {
++  accuracy,
++  buildRoundResult,
++  comboMultiplier,
++  createRoundStats,
++  pointsForRep,
++  recordRep,
++  repsToNextTier,
++  speedBonus,
++  xpForRound,
++  BASE_POINTS,
++  SPEED_BONUS_MAX,
++  SPEED_BONUS_WINDOW_MS,
++} from "../scoring";
++import { generateMathProblem, parseSpokenNumber } from "../mathProblems";
++import { LETTER_CATALOG, NUMBER_CATALOG, SIGNS, describeSign, pickSigns } from "../signCatalog";
++
++test("combo multiplier steps up at 3, 5 and 10 chained reps", () => {
++  assert.equal(comboMultiplier(0), 1);
++  assert.equal(comboMultiplier(2), 1);
++  assert.equal(comboMultiplier(3), 1.5);
++  assert.equal(comboMultiplier(5), 2);
++  assert.equal(comboMultiplier(10), 3);
++  assert.equal(comboMultiplier(99), 3);
++  assert.equal(repsToNextTier(0), 3);
++  assert.equal(repsToNextTier(4), 1);
++  assert.equal(repsToNextTier(10), null);
++});
++
++test("speed bonus decays linearly to zero at the window edge", () => {
++  assert.equal(speedBonus(0), SPEED_BONUS_MAX);
++  assert.equal(speedBonus(SPEED_BONUS_WINDOW_MS / 2), SPEED_BONUS_MAX / 2);
++  assert.equal(speedBonus(SPEED_BONUS_WINDOW_MS), 0);
++  assert.equal(speedBonus(SPEED_BONUS_WINDOW_MS * 4), 0);
++  assert.equal(speedBonus(-5), 0);
++  assert.equal(speedBonus(Number.NaN), 0);
++});
++
++test("points = (base + speed bonus) × multiplier; untimed reps get no bonus", () => {
++  assert.equal(pointsForRep({ combo: 0 }), BASE_POINTS);
++  assert.equal(pointsForRep({ combo: 0, elapsedMs: 0 }), BASE_POINTS + SPEED_BONUS_MAX);
++  assert.equal(pointsForRep({ combo: 5, elapsedMs: 0 }), (BASE_POINTS + SPEED_BONUS_MAX) * 2);
++  assert.equal(pointsForRep({ combo: 3 }), 15);
++});
++
++test("recordRep chains combos, tracks the best, and a miss breaks the chain", () => {
++  let s = createRoundStats();
++  for (let i = 0; i < 4; i++) s = recordRep(s, true);
++  assert.deepEqual([s.correct, s.total, s.combo, s.bestCombo], [4, 4, 4, 4]);
++  assert.equal(s.score, 10 + 10 + 10 + 15);
++  assert.equal(s.lastPoints, 15);
++  s = recordRep(s, false);
++  assert.deepEqual([s.correct, s.total, s.combo, s.bestCombo, s.lastPoints], [4, 5, 0, 4, 0]);
++  s = recordRep(s, true);
++  assert.equal(s.combo, 1);
++  assert.equal(s.bestCombo, 4);
++});
++
++test("recordRep never mutates its input", () => {
++  const before = createRoundStats();
++  const frozen = Object.freeze({ ...before });
++  recordRep(frozen, true, 100);
++  assert.deepEqual(frozen, before);
++});
++
++test("xp rewards correct reps, a perfect round, and speed score", () => {
++  let s = createRoundStats();
++  for (let i = 0; i < 5; i++) s = recordRep(s, true);
++  assert.equal(xpForRound("lesson", s), 5 * 5 + 10);
++  const imperfect = recordRep(s, false);
++  assert.equal(xpForRound("lesson", imperfect), 25);
++  assert.equal(xpForRound("speed", s), 35 + Math.floor(s.score / 20));
++  assert.equal(xpForRound("math", createRoundStats()), 0);
++});
++
++test("buildRoundResult matches the RoundResult contract shape", () => {
++  let s = createRoundStats();
++  s = recordRep(s, true, 1000);
++  s = recordRep(s, false);
++  const result = buildRoundResult("math", s);
++  assert.deepEqual(Object.keys(result).sort(), ["correct", "mode", "score", "total", "xp"]);
++  assert.equal(result.mode, "math");
++  assert.equal(result.correct, 1);
++  assert.equal(result.total, 2);
++  assert.equal(result.score, s.score);
++  assert.equal(accuracy(result), 0.5);
++  assert.equal(accuracy(createRoundStats()), 0);
++});
++
++test("math problems always have single-digit answers and ramp difficulty", () => {
++  for (let index = 0; index < 8; index++) {
++    for (let i = 0; i < 200; i++) {
++      const p = generateMathProblem(index);
++      assert.ok(Number.isInteger(p.answer) && p.answer >= 1 && p.answer <= 9, `${p.prompt} = ${p.answer}`);
++      if (index < 2) assert.equal(p.op, "+");
++      if (index < 4) assert.notEqual(p.op, "×");
++    }
++  }
++  assert.equal(generateMathProblem(6, () => 0).op, "×");
++});
++
++test("spoken numbers parse digits, words, homophones, and sentences", () => {
++  assert.equal(parseSpokenNumber("five"), 5);
++  assert.equal(parseSpokenNumber("It's 7."), 7);
++  assert.equal(parseSpokenNumber("The answer is four"), 4);
++  assert.equal(parseSpokenNumber("for"), 4);
++  assert.equal(parseSpokenNumber("to"), 2);
++  assert.equal(parseSpokenNumber("Eight!"), 8);
++  assert.equal(parseSpokenNumber("um, I think nine"), 9);
++  assert.equal(parseSpokenNumber(""), null);
++  assert.equal(parseSpokenNumber("banana"), null);
++});
++
++test("catalogs only contain signs the recognizer can confirm, each with a description", () => {
++  for (const label of [...LETTER_CATALOG, ...NUMBER_CATALOG]) {
++    assert.ok(SIGNS[label], `missing description for ${label}`);
++    assert.ok(SIGNS[label].description.length > 10);
++    assert.ok(SIGNS[label].tip.length > 5);
++  }
++  assert.equal(describeSign("Q").kind, "letter");
++  assert.equal(describeSign("0").kind, "number");
++});
++
++test("pickSigns shuffles without immediate repeats and fills beyond the catalog", () => {
++  const picks = pickSigns(12, LETTER_CATALOG, () => 0.3);
++  assert.equal(picks.length, 12);
++  for (let i = 1; i < picks.length; i++) assert.notEqual(picks[i], picks[i - 1]);
++  const first = pickSigns(5, LETTER_CATALOG, () => 0.99);
++  assert.deepEqual([...first].sort(), [...LETTER_CATALOG].sort());
++  assert.deepEqual(pickSigns(0), []);
++});
+diff --git a/src/games/tests/run.mjs b/src/games/tests/run.mjs
+new file mode 100644
+index 0000000..627214c
+--- /dev/null
++++ b/src/games/tests/run.mjs
+@@ -0,0 +1,23 @@
++// Mirrors src/recognition/tests/run.mjs: transpile the pure modules with the
++// repo's TypeScript and run them under Node's built-in test runner.
++//   node src/games/tests/run.mjs
++import ts from "typescript";
++import { readFileSync, writeFileSync, mkdtempSync, mkdirSync, rmSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import { execFileSync } from "node:child_process";
++
++const temporary = mkdtempSync(join(tmpdir(), "signquest-games-tests-"));
++try {
++  mkdirSync(join(temporary, "tests"));
++  for (const name of ["scoring.ts", "mathProblems.ts", "signCatalog.ts", "tests/games.test.ts"]) {
++    const source = readFileSync(new URL(`../${name}`, import.meta.url), "utf8");
++    const compiled = ts.transpileModule(source, {
++      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2023, esModuleInterop: true },
++    });
++    writeFileSync(join(temporary, name.replace(/\.ts$/, ".js")), compiled.outputText);
++  }
++  execFileSync(process.execPath, ["--test", join(temporary, "tests/games.test.js")], { stdio: "inherit" });
++} finally {
++  rmSync(temporary, { recursive: true, force: true });
++}
+diff --git a/src/games/useCountdown.ts b/src/games/useCountdown.ts
+new file mode 100644
+index 0000000..1743bd0
+--- /dev/null
++++ b/src/games/useCountdown.ts
+@@ -0,0 +1,49 @@
++// Second-resolution countdown used by Speed Challenge (whole round) and Math
++// mode (per problem). Ticks off wall-clock time rather than counting
++// intervals so a throttled background tab still ends on time.
++import { useCallback, useEffect, useRef, useState } from "react";
++
++export function useCountdown(seconds: number, onExpire?: () => void) {
++  const [secondsLeft, setSecondsLeft] = useState(seconds);
++  const [running, setRunning] = useState(false);
++  const deadline = useRef<number>(0);
++  const expireRef = useRef(onExpire);
++  useEffect(() => {
++    expireRef.current = onExpire;
++  });
++
++  const start = useCallback(
++    (total = seconds) => {
++      deadline.current = Date.now() + total * 1000;
++      setSecondsLeft(total);
++      setRunning(true);
++    },
++    [seconds],
++  );
++
++  const stop = useCallback(() => setRunning(false), []);
++
++  const reset = useCallback(
++    (total = seconds) => {
++      setRunning(false);
++      setSecondsLeft(total);
++    },
++    [seconds],
++  );
++
++  useEffect(() => {
++    if (!running) return;
++    const id = setInterval(() => {
++      const left = Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000));
++      setSecondsLeft(left);
++      if (left <= 0) {
++        clearInterval(id);
++        setRunning(false);
++        expireRef.current?.();
++      }
++    }, 250);
++    return () => clearInterval(id);
++  }, [running]);
++
++  return { secondsLeft, running, start, stop, reset };
++}
+diff --git a/src/games/useGameRecognition.ts b/src/games/useGameRecognition.ts
+new file mode 100644
+index 0000000..0a86343
+--- /dev/null
++++ b/src/games/useGameRecognition.ts
+@@ -0,0 +1,17 @@
++// Thin switch between A's real recognizer and A's mock. Append `?mock=1` to
++// any game URL to play without a camera (demo fallback, UI work on a laptop
++// with no webcam, automated smoke tests). The mock is fed the current target
++// so every prompt confirms after the normal one-second hold.
++import { useMockSignRecognition } from "../recognition/mock";
++import { useSignRecognition } from "../recognition/useSignRecognition";
++import type { Recognition, RecognitionOptions } from "../recognition/types";
++
++export const USE_MOCK_RECOGNITION =
++  typeof window !== "undefined" && new URLSearchParams(window.location.search).has("mock");
++
++export function useGameRecognition(options: RecognitionOptions): Recognition {
++  // The flag is constant for the page's lifetime, so hook order never changes.
++  const recognize = USE_MOCK_RECOGNITION ? useMockSignRecognition : useSignRecognition;
++  const sequence = options.target ? [{ label: options.target, confidence: 0.95 }, null] : [null];
++  return recognize(USE_MOCK_RECOGNITION ? { ...options, sequence } : options);
++}
+diff --git a/src/games/useRound.ts b/src/games/useRound.ts
+new file mode 100644
+index 0000000..6732a09
+--- /dev/null
++++ b/src/games/useRound.ts
+@@ -0,0 +1,49 @@
++// Round lifecycle shared by all modes: the local profile, live RoundStats,
++// and finishing (build the RoundResult, award XP via completeRound).
++// Stats are mirrored in a ref so an event handler can record a rep and
++// immediately see the updated numbers to decide whether the round is over.
++import { useCallback, useRef, useState } from "react";
++import type { GameMode, RoundResult, UserProfile } from "../lib/contracts";
++import { getLocalProfile } from "../lib/localProfile";
++import { buildRoundResult, completeRound, createRoundStats, recordRep, type RoundStats } from "./gameLogic";
++
++export function useRound(mode: GameMode) {
++  const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
++  const [stats, setStats] = useState<RoundStats>(createRoundStats);
++  const statsRef = useRef(stats);
++  const [result, setResult] = useState<RoundResult | null>(null);
++  const [saving, setSaving] = useState(false);
++  const finishedRef = useRef(false);
++
++  /** Records one attempt and returns the new stats synchronously. */
++  const record = useCallback((wasCorrect: boolean, elapsedMs?: number): RoundStats => {
++    const next = recordRep(statsRef.current, wasCorrect, elapsedMs);
++    statsRef.current = next;
++    setStats(next);
++    return next;
++  }, []);
++
++  /** Ends the round exactly once, even if called from a timer and a rep together. */
++  const finish = useCallback(
++    (finalStats: RoundStats = statsRef.current) => {
++      if (finishedRef.current || !profile) return;
++      finishedRef.current = true;
++      const roundResult = buildRoundResult(mode, finalStats);
++      setResult(roundResult);
++      setSaving(true);
++      void completeRound(profile, roundResult)
++        .then(setProfile)
++        .finally(() => setSaving(false));
++    },
++    [mode, profile],
++  );
++
++  const restart = useCallback(() => {
++    finishedRef.current = false;
++    statsRef.current = createRoundStats();
++    setStats(statsRef.current);
++    setResult(null);
++  }, []);
++
++  return { profile, stats, result, saving, record, finish, restart, isFinished: () => finishedRef.current };
++}

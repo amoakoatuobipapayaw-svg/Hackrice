@@ -1,143 +1,146 @@
-// Speed Challenge: a timed run of signs. Correct reps score points that
-// scale up with an in-round combo streak; no coaching/voice here, this
-// mode is about pace. Recognition owns hold-to-confirm internally.
+// Speed Challenge: sign as many prompts as you can before the clock runs
+// out. Each rep scores (base + speed bonus) × combo multiplier — see
+// scoring.ts. A skip breaks the combo. No coaching or voice here: it's about
+// pace, and the camera loop is already the hot path.
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
-import { useSignRecognition } from "../recognition/useSignRecognition";
-import type { RoundResult, UserProfile } from "../lib/contracts";
-import { getLocalProfile } from "../lib/localProfile";
-import { completeRound, pointsForRep, scoreRound, SPEED_CHALLENGE_SECONDS } from "./gameLogic";
-import { RecognitionCamera } from "./RecognitionCamera";
+import { CameraPanel } from "./CameraPanel";
+import { SPEED_BONUS_MAX, SPEED_BONUS_WINDOW_MS, SPEED_CHALLENGE_SECONDS } from "./gameLogic";
+import { RequireProfile } from "./RequireProfile";
 import { RoundComplete } from "./RoundComplete";
-import { LETTER_CATALOG } from "./signCatalog";
+import { ScoreHud } from "./ScoreHud";
+import { LETTER_CATALOG, NUMBER_CATALOG, pickSigns } from "./signCatalog";
+import { TargetCard } from "./TargetCard";
+import { useCountdown } from "./useCountdown";
+import { useGameRecognition } from "./useGameRecognition";
+import { useRound } from "./useRound";
+
+type SignSet = "letters" | "numbers";
+type Phase = "setup" | "ready" | "playing";
+const READY_SECONDS = 3;
+const QUEUE_LENGTH = 80; // more prompts than anyone can clear in one round
 
 export function SpeedChallenge() {
-  const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
-  const [started, setStarted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(SPEED_CHALLENGE_SECONDS);
-  const [counter, setCounter] = useState(0);
-  const [comboStreak, setComboStreak] = useState(0);
-  const [matches, setMatches] = useState(0);
-  const [score, setScore] = useState(0);
-  const [result, setResult] = useState<RoundResult | null>(null);
+  const round = useRound("speed");
+  const [signSet, setSignSet] = useState<SignSet>("letters");
+  const [phase, setPhase] = useState<Phase>("setup");
+  const [queue, setQueue] = useState<string[]>([]);
+  const [position, setPosition] = useState(0);
+  const [flash, setFlash] = useState<"success" | "miss" | null>(null);
+  const promptShownAt = useRef(0);
 
-  const target = LETTER_CATALOG[counter % LETTER_CATALOG.length];
+  const playing = phase === "playing" && !round.result;
+  const target = playing ? queue[position] : undefined;
 
-  function handleConfirm() {
-    setMatches((m) => m + 1);
-    setScore((s) => s + pointsForRep(comboStreak));
-    setComboStreak((c) => c + 1);
-    setCounter((c) => c + 1);
-  }
-
-  const recognition = useSignRecognition({
-    target: started ? target : undefined,
-    vocabulary: "letters",
-    onConfirm: handleConfirm,
-  });
+  const recognition = useGameRecognition({ target, vocabulary: signSet, onConfirm: () => settle(true) });
   const recognitionRef = useRef(recognition);
   useEffect(() => {
     recognitionRef.current = recognition;
   });
 
-  useEffect(() => {
-    if (!started || timeLeft <= 0) return;
-    const id = setInterval(() => setTimeLeft((t) => t - 1), 1000);
-    return () => clearInterval(id);
-  }, [started, timeLeft]);
-
-  useEffect(() => {
-    if (!started || timeLeft > 0 || !profile || result) return;
+  const clock = useCountdown(SPEED_CHALLENGE_SECONDS, () => {
     recognitionRef.current.stop();
-    const roundResult = scoreRound("speed", matches, matches, score);
-    setResult(roundResult);
-    void completeRound(profile, roundResult).then(setProfile);
-  }, [started, timeLeft, profile, result, matches, score]);
+    round.finish();
+  });
+  const ready = useCountdown(READY_SECONDS, () => {
+    promptShownAt.current = performance.now();
+    setPhase("playing");
+    clock.start();
+  });
 
-  if (!profile) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <p className="text-slate-300">
-          <Link to="/onboarding" className="text-violet-400 underline">
-            Tell us your name
-          </Link>{" "}
-          before starting a challenge.
-        </p>
-      </div>
-    );
+  function settle(wasCorrect: boolean) {
+    if (!playing) return;
+    const elapsed = performance.now() - promptShownAt.current;
+    round.record(wasCorrect, wasCorrect ? elapsed : undefined);
+    setFlash(wasCorrect ? "success" : "miss");
+    setTimeout(() => setFlash(null), 350);
+    promptShownAt.current = performance.now();
+    setPosition((p) => p + 1);
   }
 
-  if (result) {
+  // Warm up camera + model during the 3-2-1 so the first prompt is instantly scorable.
+  // `session` bumps on every begin() so this re-runs on "Play again" even
+  // though status is already idle and the mode is already started.
+  const autoStart = useRef(false);
+  const [session, setSession] = useState(0);
+  const { status: recognitionStatus, start: startRecognition } = recognition;
+  useEffect(() => {
+    if (phase === "ready" && autoStart.current && recognitionStatus === "idle") {
+      autoStart.current = false;
+      startRecognition();
+    }
+  }, [phase, session, recognitionStatus, startRecognition]);
+
+  function begin(set: SignSet) {
+    setSignSet(set);
+    setQueue(pickSigns(QUEUE_LENGTH, set === "letters" ? LETTER_CATALOG : NUMBER_CATALOG));
+    setPosition(0);
+    setFlash(null);
+    round.restart();
+    recognition.reset();
+    clock.reset();
+    autoStart.current = true;
+    setSession((n) => n + 1);
+    setPhase("ready");
+    ready.start();
+  }
+
+  if (!round.profile) return <RequireProfile mode="a challenge" />;
+
+  if (round.result) {
     return (
       <div className="px-4 py-16">
         <RoundComplete
-          result={result}
-          profile={profile}
-          onRetry={() => {
-            recognition.reset();
-            setStarted(false);
-            setTimeLeft(SPEED_CHALLENGE_SECONDS);
-            setCounter(0);
-            setComboStreak(0);
-            setMatches(0);
-            setScore(0);
-            setResult(null);
-          }}
+          result={round.result}
+          stats={round.stats}
+          profile={round.profile}
+          saving={round.saving}
+          onRetry={() => begin(signSet)}
         />
       </div>
     );
   }
 
-  return (
-    <div className="mx-auto max-w-xl px-4 py-12 text-center">
-      {started ? (
-        <>
-          <p className="text-sm font-medium text-slate-400">{timeLeft}s left</p>
-          <h1 className="mt-2 text-4xl font-bold">{target}</h1>
-        </>
-      ) : (
-        <>
-          <h1 className="text-2xl font-bold">Speed Challenge</h1>
-          <p className="mt-2 text-slate-400">
-            Sign as many prompts as you can in {SPEED_CHALLENGE_SECONDS} seconds. Combos of
-            3+ and 5+ score more per rep.
-          </p>
-        </>
-      )}
-
-      <div className="mt-4">
-        <RecognitionCamera videoRef={recognition.videoRef} canvasRef={recognition.canvasRef} />
-      </div>
-
-      {!started && (
-        <Button
-          className="mt-4"
-          onClick={() => {
-            setStarted(true);
-            recognition.start();
-          }}
-        >
-          Start
-        </Button>
-      )}
-      {started && recognition.status === "loading" && <p className="mt-4 text-slate-400">Starting camera…</p>}
-      {recognition.status === "error" && (
-        <p className="mt-4 text-red-400" role="alert">
-          {recognition.error}
+  if (phase === "setup") {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-12 text-center">
+        <h1 className="text-3xl font-black">Speed Challenge</h1>
+        <p className="mt-2 text-slate-400">
+          {SPEED_CHALLENGE_SECONDS} seconds on the clock. Every rep is worth 10, plus up to +{SPEED_BONUS_MAX} if you
+          land it within {SPEED_BONUS_WINDOW_MS / 1000}s. Chain 3, 5, and 10 in a row for x1.5, x2, and x3.
         </p>
-      )}
+        <div className="mt-8 grid gap-3 sm:grid-cols-2">
+          <Button onClick={() => begin("letters")} className="py-5 text-lg">
+            Letters
+            <span className="block text-xs font-normal opacity-80">{LETTER_CATALOG.join(" · ")}</span>
+          </Button>
+          <Button variant="secondary" onClick={() => begin("numbers")} className="py-5 text-lg">
+            Numbers
+            <span className="block text-xs font-normal opacity-80">1 – 9</span>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-      {started && (
-        <>
-          <p className="mt-4 text-slate-300">
-            Recognized: <span className="font-mono">{recognition.current?.label ?? "—"}</span>
-          </p>
-          <p className="mt-1 text-sm text-slate-400">
-            Combo: {comboStreak} · Score: {score}
-          </p>
-        </>
+  return (
+    <div className="mx-auto max-w-xl space-y-4 px-4 py-8">
+      {phase === "ready" ? (
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 py-6 text-center" role="status" aria-live="assertive">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Get ready</p>
+          <p className="text-7xl font-black tabular-nums">{ready.secondsLeft || "Go!"}</p>
+        </div>
+      ) : (
+        <TargetCard label={queue[position]} eyebrow={`Prompt ${position + 1}`} compact celebrate={flash === "success"} />
       )}
+      <ScoreHud stats={round.stats} secondsLeft={phase === "ready" ? SPEED_CHALLENGE_SECONDS : clock.secondsLeft} />
+      <CameraPanel recognition={recognition} target={target} flash={flash} />
+      <div className="flex items-center justify-between text-sm text-slate-400">
+        <span>Release your hand between reps so the next one can confirm.</span>
+        <Button variant="ghost" onClick={() => settle(false)} disabled={!playing} className="text-sm">
+          Skip (breaks combo)
+        </Button>
+      </div>
     </div>
   );
 }
