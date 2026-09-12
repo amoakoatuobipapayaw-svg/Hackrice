@@ -1,16 +1,15 @@
 # SignQuest game experience
 
-This pass was requested to improve B's game UI. It uses the lesson-progress and
-clear answer-feedback ideas from https://github.com/sanidhyy/duolingo-clone as
-inspiration. No code, illustrations, or branding were copied, and no new
-packages were added. The shared top navigation in `src/app/Nav.tsx` also
-wraps on small screens to prevent horizontal overflow.
+The visual layout follows the sidebar, winding learning path, raised buttons,
+and progress-card patterns in https://github.com/sanidhyy/duolingo-clone.
+The implementation is original React/Tailwind code; no assets or source code were
+copied and no new packages were added. Home links each path node to a working
+practice mode without implying tracked completion or locked lessons.
 
-The interface uses warm off-white pages, white cards, charcoal text, and one
-muted green action color. Shared semantic palette tokens live in `src/globals.css`
-and adapt to high-contrast mode. The camera and sign guide share a two-column layout from tablet widths;
-phones use a single column. All sign guidance is visible text rather than audio
-alone. Supported lesson targets remain I/L/V/W/Y; Math answers remain 1–9.
+White surfaces, green actions and blue selected navigation use shared semantic
+tokens in `src/globals.css`, including high-contrast overrides. The sidebar becomes
+a compact top navigation on phones. Camera and sign guide sit side by side from
+tablet widths. Supported lesson targets remain I/L/V/W/Y; Math answers remain 1–9.
 
 - `GameLayout.tsx`: mode navigation, page headings, progress and profile entry.
 - `SignGuide.tsx`: three-step hand-shape instructions and lesson milestones.

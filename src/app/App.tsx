@@ -17,7 +17,7 @@ function App() {
         Skip to main content
       </a>
       <Nav />
-      <main id="main-content" tabIndex={-1}>
+      <main id="main-content" tabIndex={-1} className="lg:pl-56">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/onboarding" element={<Onboarding />} />
