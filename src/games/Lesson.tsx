@@ -72,14 +72,14 @@ export function Lesson() {
     );
   }
 
-  return <GameLayout mode="Guided practice" title="Small signs. Real connections." description="Learn five shapes at your own pace. Follow the guide, sign to your camera, and hold steady to move forward." progress={index / LESSON_LENGTH} progressLabel={`${index} of ${LESSON_LENGTH} complete`}>
+  return <GameLayout mode="Guided practice" title="Learn five signs." description="Learn five shapes at your own pace. Follow the guide, sign to your camera, and hold steady to move forward." progress={index / LESSON_LENGTH} progressLabel={`${index} of ${LESSON_LENGTH} complete`}>
     <div className="grid gap-5 md:grid-cols-2">
       <SignGuide target={target ?? 'I'} targets={targets} completed={index} />
       <CameraPanel recognition={recognition} target={target} />
     </div>
-    <aside className="mt-5 flex gap-4 rounded-2xl border border-slate-700 bg-slate-900 p-5" aria-label="Sign coach">
-      <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/20 text-xl text-violet-200">✦</span>
-      <div><h2 className="text-sm font-bold text-violet-200">A little guidance</h2><p role="status" className="mt-1 text-sm leading-relaxed text-slate-300">{recognition.coachingLine ?? 'Keep your wrist relaxed and your whole hand visible. There’s no timer here—take your time.'}</p><p className="mt-2 text-xs text-slate-400">AI coaching uses a hand-landmark summary while you practice.</p></div>
+    <aside className="mt-5 flex gap-4 rounded-2xl border border-line bg-surface p-5" aria-label="Sign coach">
+      <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-soft text-xl text-brand">✦</span>
+      <div><h2 className="text-sm font-bold text-brand">Practice tip</h2><p role="status" className="mt-1 text-sm leading-relaxed text-muted">{recognition.coachingLine ?? 'Keep your wrist relaxed and your whole hand visible. There’s no timer here—take your time.'}</p><p className="mt-2 text-xs text-muted">AI coaching uses a hand-landmark summary while you practice.</p></div>
     </aside>
     <div className="mt-4"><Caption caption={voice.caption} isSpeaking={voice.isSpeaking} isListening={voice.isListening} /></div>
   </GameLayout>;

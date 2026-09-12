@@ -26,7 +26,7 @@ async function loadSdk(): Promise<void> {
 export function PersonaGate({ onVerified }: { onVerified: () => void }) {
   if (!templateId) {
     return (
-      <p className="text-sm text-amber-400">
+      <p className="text-sm text-ink">
         Persona sandbox not configured (missing VITE_PERSONA_TEMPLATE_ID).
       </p>
     );

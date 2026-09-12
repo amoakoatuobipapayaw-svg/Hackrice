@@ -1,33 +1,34 @@
-/* globals.css — the ONE stylesheet for the app (see CLAUDE.md conventions).
-   Everything else is Tailwind utility classes. */
+/* Shared palette: warm paper, readable ink, and one green action color. */
 @import "tailwindcss";
 
 @theme {
   --font-sans: system-ui, "Segoe UI", Roboto, sans-serif;
+  --color-canvas: #f6f5f0;
+  --color-surface: #ffffff;
+  --color-soft: #eeeee6;
+  --color-line: #d4d6cc;
+  --color-ink: #272d27;
+  --color-muted: #596157;
+  --color-brand: #376346;
+  --color-brand-hover: #294c35;
+  --color-danger: #aa302c;
 }
 
-html,
-body,
-#root {
-  height: 100%;
-}
+html, body, #root { min-height: 100%; }
+body { @apply bg-canvas text-ink antialiased; }
+:focus-visible { outline: 3px solid var(--color-brand); outline-offset: 3px; }
 
-body {
-  @apply bg-slate-950 text-slate-100 antialiased;
+/* Keep the same semantic roles when the user selects high contrast. */
+html[data-contrast="high"] {
+  --color-canvas: #000000;
+  --color-surface: #000000;
+  --color-soft: #1b1b1b;
+  --color-line: #ffffff;
+  --color-ink: #ffffff;
+  --color-muted: #eeeeee;
+  --color-brand: #28673c;
+  --color-brand-hover: #205632;
+  --color-danger: #ffb4ab;
 }
-
-/* High-contrast mode, toggled by components/ui/HighContrastToggle.tsx. */
-html[data-contrast="high"] body {
-  background-color: #000;
-  color: #fff;
-}
-
-html[data-contrast="high"] :focus-visible {
-  outline: 3px solid #fde047;
-  outline-offset: 2px;
-}
-
-html[data-contrast="high"] .border-slate-800,
-html[data-contrast="high"] .border-slate-700 {
-  border-color: #fff;
-}
+html[data-contrast="high"] .text-brand { color: #b9efc8; }
+html[data-contrast="high"] :focus-visible { outline-color: #ffffff; }

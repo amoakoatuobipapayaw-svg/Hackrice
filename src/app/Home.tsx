@@ -35,7 +35,7 @@ export function Home() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Welcome back, {profile.name}</h1>
-          <p className="text-slate-400">Ready to sign with {NAME} today?</p>
+          <p className="text-muted">Ready to sign with {NAME} today?</p>
         </div>
         <StreakBadge profile={profile} />
       </div>
@@ -43,7 +43,7 @@ export function Home() {
       <Card className="mb-8">
         <XpBar profile={profile} />
         {!profile.verified && (
-          <div className="mt-4 border-t border-slate-800 pt-4">
+          <div className="mt-4 border-t border-line pt-4">
             <PersonaGate onVerified={handleVerified} />
           </div>
         )}
@@ -52,9 +52,9 @@ export function Home() {
       <div className="grid gap-4 sm:grid-cols-3">
         {MODES.map((mode) => (
           <Link key={mode.to} to={mode.to}>
-            <Card className="h-full transition-colors hover:border-violet-500">
+            <Card className="h-full transition-colors hover:border-brand">
               <h2 className="font-semibold">{mode.title}</h2>
-              <p className="mt-1 text-sm text-slate-400">{mode.blurb}</p>
+              <p className="mt-1 text-sm text-muted">{mode.blurb}</p>
             </Card>
           </Link>
         ))}

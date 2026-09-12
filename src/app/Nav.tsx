@@ -12,14 +12,14 @@ const LINKS = [
 
 const linkClasses = ({ isActive }: { isActive: boolean }) =>
   `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-    isActive ? "bg-violet-500 text-white" : "text-slate-300 hover:bg-slate-800"
+    isActive ? "bg-brand text-white" : "text-muted hover:bg-soft"
   }`;
 
 export function Nav() {
   return (
-    <header className="border-b border-slate-800">
+    <header className="border-b border-line">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <NavLink to="/" className="text-lg font-bold text-slate-100">
+        <NavLink to="/" className="text-lg font-bold text-ink">
           {NAME}
         </NavLink>
         <nav aria-label="Main navigation" className="flex flex-wrap items-center gap-1">
