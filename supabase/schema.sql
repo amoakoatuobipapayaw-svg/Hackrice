@@ -7,9 +7,14 @@
 -- good enough for a demo leaderboard, not for production. Persona verification
 -- is enforced client-side only (see src/meta/PersonaGate.tsx).
 
+-- id equals the Supabase Auth user id for Google-authenticated accounts
+-- (see src/lib/auth.ts) — guests never get a row here at all, they stay
+-- local-only (src/lib/localProfile.ts). No FK to auth.users to keep this
+-- table creatable standalone; enforced in application code instead.
 create table if not exists profiles (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  email text,
   streak int not null default 0,
   xp int not null default 0,
   level int not null default 1,
@@ -17,6 +22,7 @@ create table if not exists profiles (
   last_active date,
   created_at timestamptz not null default now()
 );
+alter table profiles add column if not exists email text;
 
 create table if not exists scores (
   user_id uuid primary key references profiles(id) on delete cascade,
@@ -53,4 +59,12 @@ drop policy if exists "public write streaks" on streaks;
 create policy "public write streaks" on streaks for all to anon using (true) with check (true);
 
 -- Realtime: src/meta/Leaderboard.tsx subscribes to postgres_changes on `scores`.
-alter publication supabase_realtime add table scores;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'scores'
+  ) then
+    alter publication supabase_realtime add table scores;
+  end if;
+end $$;

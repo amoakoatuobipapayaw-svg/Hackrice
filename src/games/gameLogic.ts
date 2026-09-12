@@ -23,16 +23,18 @@ export function scoreRound(mode: GameMode, correct: number, total: number, score
 }
 
 /**
- * Awards a finished round's XP and saves the profile locally. Guests (not
- * Persona-verified — see meta/PersonaGate.tsx) only get that local
- * feedback: no streak, no server persistence, not leaderboard-eligible.
- * Verified accounts additionally bump the real streak, sync XP/level to
- * Supabase, and post to the leaderboard.
+ * Awards a finished round's XP and saves the profile locally. Guests (no
+ * Google account — see lib/auth.ts) only get that local feedback: no
+ * streak, no server persistence, not leaderboard-eligible. Signed-in
+ * accounts additionally bump the real streak and sync XP/level to
+ * Supabase. Posting to the public leaderboard is gated a level further,
+ * on Persona verification — an account can be real without being
+ * leaderboard-eligible yet.
  */
 export async function completeRound(profile: UserProfile, result: RoundResult): Promise<UserProfile> {
   const xp = profile.xp + result.xp;
 
-  if (!profile.verified) {
+  if (!profile.email) {
     const updated: UserProfile = { ...profile, xp, level: levelForXp(xp) };
     saveLocalProfile(updated);
     return updated;
@@ -42,13 +44,16 @@ export async function completeRound(profile: UserProfile, result: RoundResult): 
   const updated: UserProfile = { ...profile, xp, streak, level: levelForXp(xp) };
   saveLocalProfile(updated);
   await syncProfile(updated);
-  await postScore({
-    userId: updated.id,
-    name: updated.name,
-    xp: updated.xp,
-    verified: updated.verified,
-    updatedAt: new Date().toISOString(),
-  });
+
+  if (updated.verified) {
+    await postScore({
+      userId: updated.id,
+      name: updated.name,
+      xp: updated.xp,
+      verified: updated.verified,
+      updatedAt: new Date().toISOString(),
+    });
+  }
 
   return updated;
 }

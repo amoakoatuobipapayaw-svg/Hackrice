@@ -54,10 +54,20 @@ export type ScoreEntry = {
   updatedAt: string;
 };
 
-/** A user's persistent profile: streak, XP, level, and Persona verification. */
+/**
+ * A user's persistent profile: streak, XP, level, and Persona verification.
+ * `email` is present only for Google-authenticated accounts (see
+ * lib/auth.ts) and absent for guests — that's the signal gameLogic.ts
+ * uses to decide whether a completed round persists to Supabase at all.
+ * `verified` (Persona) is a separate, independent gate: it only controls
+ * whether an authenticated account's scores post to the public
+ * leaderboard, matching the "Google gets you an account, Persona proves
+ * you're human enough to compete" model.
+ */
 export type UserProfile = {
   id: string;
   name: string;
+  email?: string;
   streak: number;
   xp: number;
   level: number;

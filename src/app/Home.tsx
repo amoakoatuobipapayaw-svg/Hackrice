@@ -1,9 +1,12 @@
-import { useState } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { Icon, type IconName } from '../components/ui/Icon';
 import { LogoMark } from '../components/ui/Logo';
+import { signOutUser } from '../lib/auth';
 import { getActivityDays } from '../lib/activityLog';
-import { getLocalProfile, saveLocalProfile } from '../lib/localProfile';
+import type { UserProfile } from '../lib/contracts';
+import { clearLocalProfile, saveLocalProfile } from '../lib/localProfile';
+import { resolveProfile } from '../lib/profile';
 import { syncProfile } from '../lib/supabase';
 import { PersonaGate } from '../meta/PersonaGate';
 import { StreakCalendar } from '../meta/StreakCalendar';
@@ -40,19 +43,31 @@ function FingerspellName({ name }: { name: string }) {
 }
 
 export function Home() {
-  const [profile, setProfile] = useState(getLocalProfile);
+  const [profile, setProfile] = useState<UserProfile | null | undefined>(undefined);
   const [activeDays] = useState(getActivityDays);
-  if (!profile) return <Navigate to="/onboarding" replace />;
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    resolveProfile().then(setProfile);
+  }, []);
+
+  if (profile === undefined) return null; // resolving auth session — avoid an onboarding flash
+  if (profile === null) return <Navigate to="/onboarding" replace />;
   const currentProfile = profile;
+
   async function handleVerified() {
     const updated = { ...currentProfile, verified: true };
     saveLocalProfile(updated);
     setProfile(updated);
-    // Persona verification IS account creation: this is the first time
-    // this profile gets a real row in Supabase, unlocking streak
-    // persistence and leaderboard eligibility in gameLogic.ts.
     await syncProfile(updated);
   }
+
+  async function handleLogout() {
+    await signOutUser();
+    clearLocalProfile();
+    navigate('/onboarding', { replace: true });
+  }
+
   const stats: Array<{ icon: IconName; label: string; value: string; title: string; tone: string }> = [
     { icon: 'flame', label: 'streak', value: `${profile.streak} day${profile.streak === 1 ? '' : 's'}`, title: 'Current day streak', tone: profile.streak > 0 ? 'text-accent-ink' : 'text-muted' },
     { icon: 'star', label: 'xp', value: `${profile.xp} XP`, title: 'Total XP earned', tone: 'text-brand' },
@@ -62,9 +77,12 @@ export function Home() {
   return <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8">
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b-2 border-line pb-5">
       <span className="text-xs font-extrabold tracking-widest text-muted uppercase">American Sign Language</span>
-      <ul className="flex flex-wrap gap-2" aria-label="Your stats">
-        {stats.map((s) => <li key={s.label} title={s.title} className="flex items-center gap-1.5 rounded-full border-2 border-line bg-surface px-3 py-1.5 text-sm font-extrabold"><Icon name={s.icon} size={16} className={s.tone} /><span>{s.value}</span></li>)}
-      </ul>
+      <div className="flex flex-wrap items-center gap-3">
+        <ul className="flex flex-wrap gap-2" aria-label="Your stats">
+          {stats.map((s) => <li key={s.label} title={s.title} className="flex items-center gap-1.5 rounded-full border-2 border-line bg-surface px-3 py-1.5 text-sm font-extrabold"><Icon name={s.icon} size={16} className={s.tone} /><span>{s.value}</span></li>)}
+        </ul>
+        {profile.email && <button type="button" onClick={handleLogout} className="text-xs font-bold text-muted underline hover:text-ink">Log out</button>}
+      </div>
     </div>
 
     <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_300px]">
@@ -111,9 +129,20 @@ export function Home() {
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-ink" aria-hidden="true"><Icon name="trophy" size={20} /></span>
             <h2 className="text-lg font-extrabold">Better together</h2>
           </div>
-          <p className="mt-3 text-sm leading-relaxed text-muted">{profile.verified ? 'Your streak and XP are saved to your account and count on the leaderboard.' : "You're practicing as a guest. XP shows for this session, but nothing is saved. Verify once to create your account, save your streak, and join the leaderboard."}</p>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            {profile.verified
+              ? 'Your streak and XP are saved to your account and count on the leaderboard.'
+              : profile.email
+                ? "Your account is real and your progress is saved — verify with Persona to also join the leaderboard."
+                : "You're practicing as a guest. XP shows for this session, but nothing is saved. Sign in with Google to create an account."}
+          </p>
           <Link to="/leaderboard" className="mt-4 inline-flex items-center gap-1.5 text-sm font-extrabold text-brand uppercase hover:underline underline-offset-4">View leaderboard<Icon name="arrowRight" size={16} /></Link>
-          {!profile.verified && import.meta.env.VITE_PERSONA_TEMPLATE_ID && <div className="mt-5 border-t-2 border-line pt-4"><PersonaGate onVerified={handleVerified} /></div>}
+          {profile.email && !profile.verified && import.meta.env.VITE_PERSONA_TEMPLATE_ID && (
+            <div className="mt-5 border-t-2 border-line pt-4"><PersonaGate onVerified={handleVerified} /></div>
+          )}
+          {!profile.email && (
+            <Link to="/onboarding" className="mt-5 flex items-center justify-center gap-2 rounded-xl border-2 border-b-4 border-line py-3 text-center text-sm font-extrabold tracking-wide text-brand uppercase hover:bg-soft">Sign in with Google</Link>
+          )}
         </section>
 
         <section className="rounded-2xl bg-soft p-5">
