@@ -1,0 +1,15 @@
+/* Paste over the existing brand values in src/globals.css (or wherever the
+ * `brand` / `brand-hover` Tailwind tokens are defined). Everything else —
+ * cream, white, black, ink, line, soft — stays exactly as it is. */
+
+/* Default (cream + white) */
+:root {
+  --brand: #2f5aa8;        /* white text 6.7:1, on cream 6.1:1 — same muted depth as the old green */
+  --brand-hover: #24488a;  /* white text 8.9:1 */
+}
+
+/* High contrast (black + white) */
+:root[data-contrast="high"] {
+  --brand: #2563eb;        /* white text 5.2:1, edge vs black 4.1:1 */
+  --brand-hover: #1d4ed8;  /* white text 6.7:1 */
+}
