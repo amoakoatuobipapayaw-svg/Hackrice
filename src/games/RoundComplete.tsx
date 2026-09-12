@@ -1,32 +1,9 @@
-// Shared end-of-round summary for all three modes: XP earned, updated
-// totals, and a way to go again or check the leaderboard.
-import { Link } from "react-router-dom";
-import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
-import type { RoundResult, UserProfile } from "../lib/contracts";
+import { Link } from 'react-router-dom';
+import type { RoundResult, UserProfile } from '../lib/contracts';
 
-type RoundCompleteProps = {
-  result: RoundResult;
-  profile: UserProfile;
-  onRetry: () => void;
-};
-
-export function RoundComplete({ result, profile, onRetry }: RoundCompleteProps) {
-  return (
-    <Card className="mx-auto max-w-md text-center">
-      <h2 className="text-xl font-bold">Round complete!</h2>
-      <p className="mt-2 text-slate-300">
-        {result.correct} / {result.total} correct — +{result.xp} XP
-      </p>
-      <p className="mt-1 text-sm text-slate-400">
-        Level {profile.level} · {profile.xp} XP total · 🔥 {profile.streak} day streak
-      </p>
-      <div className="mt-6 flex justify-center gap-3">
-        <Button onClick={onRetry}>Do it again</Button>
-        <Link to="/leaderboard">
-          <Button variant="secondary">View leaderboard</Button>
-        </Link>
-      </div>
-    </Card>
-  );
+export function RoundComplete({ result, profile, onRetry }: { result: RoundResult; profile: UserProfile; onRetry: () => void }) {
+  return <section className="mx-auto max-w-xl overflow-hidden rounded-3xl border border-slate-700 bg-slate-900 text-center" aria-labelledby="round-title">
+    <div className="bg-violet-500/10 px-6 pt-10 pb-8"><div aria-hidden="true" className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl border-2 border-emerald-300 bg-emerald-400/10 text-4xl text-emerald-300">✓</div><p className="mt-6 text-xs font-bold tracking-[0.2em] text-violet-200 uppercase">Practice complete</p><h2 id="round-title" className="mt-3 text-3xl font-extrabold">Look what your hands can do.</h2><p className="mt-3 text-sm text-slate-300">{result.correct > 0 ? 'You made progress. Keep that momentum going.' : 'Every attempt is practice. Try again at your own pace.'}</p></div>
+    <div className="p-6 sm:p-8"><div className="grid grid-cols-3 gap-3">{[['XP earned', `+${result.xp}`], ['Confirmed', `${result.correct}`], ['Score', `${result.score}`]].map(([label, value]) => <div key={label} className="rounded-2xl border border-slate-700 py-4"><p className="text-xs text-slate-300">{label}</p><p className="mt-2 text-2xl font-black text-emerald-300">{value}</p></div>)}</div><p className="mt-5 text-sm text-slate-300">Level {profile.level} · {profile.xp} total XP · {profile.streak} day streak</p><div className="mt-7 flex flex-col gap-3 sm:flex-row"><button onClick={onRetry} className="flex-1 rounded-xl border-b-4 border-violet-800 bg-violet-500 px-5 py-3 font-bold hover:bg-violet-400">Practice again</button><Link to="/leaderboard" className="flex-1 rounded-xl border border-slate-600 bg-slate-800 px-5 py-3 font-bold hover:bg-slate-700">View leaderboard</Link></div><Link to="/" className="mt-5 inline-block text-sm text-slate-300 underline underline-offset-4">Back to your journey</Link></div>
+  </section>;
 }

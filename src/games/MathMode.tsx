@@ -3,8 +3,6 @@
 // recognition/useSignRecognition() (numbers vocabulary) for the sign path;
 // recognition owns hold-to-confirm internally.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { Button } from "../components/ui/Button";
 import { Caption } from "../voice/Caption";
 import { MicButton } from "../voice/MicButton";
 import { useVoice } from "../voice/useVoice";
@@ -13,7 +11,8 @@ import type { RoundResult, UserProfile } from "../lib/contracts";
 import { getLocalProfile } from "../lib/localProfile";
 import { completeRound, MATH_ROUND_LENGTH, scoreRound } from "./gameLogic";
 import { generateMathProblem, parseSpokenNumber } from "./mathProblems";
-import { RecognitionCamera } from "./RecognitionCamera";
+import { CameraPanel } from "./CameraPanel";
+import { GameLayout, ProfileGate } from "./GameLayout";
 import { RoundComplete } from "./RoundComplete";
 
 export function MathMode() {
@@ -24,6 +23,8 @@ export function MathMode() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [result, setResult] = useState<RoundResult | null>(null);
   const advancedForIndexRef = useRef(-1);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (advanceTimer.current) clearTimeout(advanceTimer.current); }, []);
 
   const voice = useVoice();
   const voiceRef = useRef(voice);
@@ -42,7 +43,7 @@ export function MathMode() {
       advancedForIndexRef.current = problemIndex;
       if (wasCorrect) setCorrect((c) => c + 1);
       setFeedback(wasCorrect ? "Correct!" : `The answer was ${problem.answer}.`);
-      setTimeout(() => {
+      advanceTimer.current = setTimeout(() => {
         setFeedback(null);
         setProblemIndex((i) => i + 1);
         setProblem(generateMathProblem());
@@ -73,18 +74,7 @@ export function MathMode() {
     advance(parseSpokenNumber(transcript) === problem.answer);
   }
 
-  if (!profile) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <p className="text-slate-300">
-          <Link to="/onboarding" className="text-violet-400 underline">
-            Tell us your name
-          </Link>{" "}
-          before starting Math mode.
-        </p>
-      </div>
-    );
-  }
+  if (!profile) return <ProfileGate />;
 
   if (result) {
     return (
@@ -106,43 +96,18 @@ export function MathMode() {
     );
   }
 
-  return (
-    <div className="mx-auto max-w-xl px-4 py-12 text-center">
-      <p className="text-sm font-medium text-slate-400">
-        Problem {problemIndex + 1} of {MATH_ROUND_LENGTH}
-      </p>
-      <h1 className="mt-2 text-4xl font-bold">{problem.prompt} = ?</h1>
-
-      <div className="mt-4">
-        <RecognitionCamera videoRef={recognition.videoRef} canvasRef={recognition.canvasRef} />
-      </div>
-
-      {recognition.status === "idle" && (
-        <Button className="mt-4" onClick={recognition.start}>
-          Start camera
-        </Button>
-      )}
-      {recognition.status === "error" && (
-        <p className="mt-4 text-red-400" role="alert">
-          {recognition.error}
-        </p>
-      )}
-
-      <p className="mt-4 text-slate-300">
-        Sign the number, or tap the mic and say it. Recognized:{" "}
-        <span className="font-mono">{recognition.current?.label ?? "—"}</span>
-      </p>
-
-      {feedback && (
-        <p className="mt-4 text-violet-300" role="status">
-          {feedback}
-        </p>
-      )}
-
-      <div className="mt-8 flex flex-col items-center gap-4">
-        <MicButton listen={voice.listen} isListening={voice.isListening} onResult={handleVoiceAnswer} />
-        <Caption caption={voice.caption} isSpeaking={voice.isSpeaking} isListening={voice.isListening} />
-      </div>
+  return <GameLayout mode="Math lab" title="Think it. Sign it." description="Solve a little puzzle, then answer with your hand or your voice. Every answer is a number from 1 to 9." progress={problemIndex / MATH_ROUND_LENGTH} progressLabel={`${Math.min(problemIndex + 1, MATH_ROUND_LENGTH)} / ${MATH_ROUND_LENGTH} puzzles`}>
+    <div className="grid gap-5 md:grid-cols-2">
+      <section className="flex flex-col rounded-3xl border border-slate-700 bg-slate-900 p-6 sm:p-8">
+        <div className="flex justify-between text-xs font-bold tracking-widest text-amber-200 uppercase"><span>Your puzzle</span><span>{correct} solved</span></div>
+        <div className="my-8 rounded-3xl border border-amber-300/20 bg-amber-300/5 px-4 py-10 text-center"><h2 className="text-5xl font-black tracking-tight sm:text-6xl">{problem.prompt}</h2><p className="mt-5 text-2xl font-bold text-amber-200">= <span className="inline-flex h-14 w-14 items-center justify-center rounded-xl border-2 border-dashed border-amber-200/50">?</span></p></div>
+        <h3 className="text-xl font-bold">Two ways to say it</h3>
+        <p className="mt-3 text-sm leading-relaxed text-slate-300">Use one hand to sign your answer, then hold for a second. Prefer to speak? Tap the microphone below.</p>
+        <div className="mt-6 flex items-center gap-4 rounded-2xl border border-slate-700 bg-slate-950 p-4"><MicButton listen={voice.listen} isListening={voice.isListening} onResult={handleVoiceAnswer} /><div><p className="text-sm font-bold">Answer by voice</p><p className="mt-1 text-xs text-slate-400">Say a number from one to nine</p></div></div>
+        <div className="mt-4"><Caption caption={voice.caption} isSpeaking={voice.isSpeaking} isListening={voice.isListening} /></div>
+        <p className="mt-auto pt-6 text-xs leading-relaxed text-slate-400">For 6–9, touch your thumb to your little, ring, middle, or index finger respectively.</p>
+      </section>
+      <CameraPanel recognition={recognition} target={String(problem.answer)} feedback={feedback} />
     </div>
-  );
+  </GameLayout>;
 }

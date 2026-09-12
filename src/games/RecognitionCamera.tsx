@@ -11,7 +11,7 @@ type RecognitionCameraProps = {
 
 export function RecognitionCamera({ videoRef, canvasRef }: RecognitionCameraProps) {
   return (
-    <div className="relative mx-auto aspect-[4/3] max-w-md overflow-hidden rounded-xl bg-slate-950">
+    <div className="relative mx-auto aspect-[4/3] w-full overflow-hidden bg-slate-950">
       <video ref={videoRef} muted playsInline className="h-full w-full -scale-x-100" />
       <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full -scale-x-100" />
     </div>

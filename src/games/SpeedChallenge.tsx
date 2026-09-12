@@ -2,15 +2,16 @@
 // scale up with an in-round combo streak; no coaching/voice here, this
 // mode is about pace. Recognition owns hold-to-confirm internally.
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { Button } from "../components/ui/Button";
 import { useSignRecognition } from "../recognition/useSignRecognition";
 import type { RoundResult, UserProfile } from "../lib/contracts";
 import { getLocalProfile } from "../lib/localProfile";
 import { completeRound, pointsForRep, scoreRound, SPEED_CHALLENGE_SECONDS } from "./gameLogic";
-import { RecognitionCamera } from "./RecognitionCamera";
+import { CameraPanel } from "./CameraPanel";
+import { GameLayout, ProfileGate } from "./GameLayout";
 import { RoundComplete } from "./RoundComplete";
 import { LETTER_CATALOG } from "./signCatalog";
+
+import { SignGuide } from "./SignGuide";
 
 export function SpeedChallenge() {
   const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
@@ -25,6 +26,7 @@ export function SpeedChallenge() {
   const target = LETTER_CATALOG[counter % LETTER_CATALOG.length];
 
   function handleConfirm() {
+    if (!started || timeLeft <= 0 || result) return;
     setMatches((m) => m + 1);
     setScore((s) => s + pointsForRep(comboStreak));
     setComboStreak((c) => c + 1);
@@ -42,10 +44,10 @@ export function SpeedChallenge() {
   });
 
   useEffect(() => {
-    if (!started || timeLeft <= 0) return;
+    if (!started || timeLeft <= 0 || recognition.status !== "running") return;
     const id = setInterval(() => setTimeLeft((t) => t - 1), 1000);
     return () => clearInterval(id);
-  }, [started, timeLeft]);
+  }, [started, timeLeft, recognition.status]);
 
   useEffect(() => {
     if (!started || timeLeft > 0 || !profile || result) return;
@@ -55,18 +57,7 @@ export function SpeedChallenge() {
     void completeRound(profile, roundResult).then(setProfile);
   }, [started, timeLeft, profile, result, matches, score]);
 
-  if (!profile) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <p className="text-slate-300">
-          <Link to="/onboarding" className="text-violet-400 underline">
-            Tell us your name
-          </Link>{" "}
-          before starting a challenge.
-        </p>
-      </div>
-    );
-  }
+  if (!profile) return <ProfileGate />;
 
   if (result) {
     return (
@@ -89,55 +80,12 @@ export function SpeedChallenge() {
     );
   }
 
-  return (
-    <div className="mx-auto max-w-xl px-4 py-12 text-center">
-      {started ? (
-        <>
-          <p className="text-sm font-medium text-slate-400">{timeLeft}s left</p>
-          <h1 className="mt-2 text-4xl font-bold">{target}</h1>
-        </>
-      ) : (
-        <>
-          <h1 className="text-2xl font-bold">Speed Challenge</h1>
-          <p className="mt-2 text-slate-400">
-            Sign as many prompts as you can in {SPEED_CHALLENGE_SECONDS} seconds. Combos of
-            3+ and 5+ score more per rep.
-          </p>
-        </>
-      )}
-
-      <div className="mt-4">
-        <RecognitionCamera videoRef={recognition.videoRef} canvasRef={recognition.canvasRef} />
-      </div>
-
-      {!started && (
-        <Button
-          className="mt-4"
-          onClick={() => {
-            setStarted(true);
-            recognition.start();
-          }}
-        >
-          Start
-        </Button>
-      )}
-      {started && recognition.status === "loading" && <p className="mt-4 text-slate-400">Starting camera…</p>}
-      {recognition.status === "error" && (
-        <p className="mt-4 text-red-400" role="alert">
-          {recognition.error}
-        </p>
-      )}
-
-      {started && (
-        <>
-          <p className="mt-4 text-slate-300">
-            Recognized: <span className="font-mono">{recognition.current?.label ?? "—"}</span>
-          </p>
-          <p className="mt-1 text-sm text-slate-400">
-            Combo: {comboStreak} · Score: {score}
-          </p>
-        </>
-      )}
+  return <GameLayout mode="Speed session" title="Find your signing rhythm." description="Thirty seconds of focused practice. Your timer only runs while the camera is ready. Pause whenever you need." progress={timeLeft / SPEED_CHALLENGE_SECONDS} progressLabel={`${timeLeft}s remaining`}>
+    <div className="mb-5 grid grid-cols-3 gap-3">{[['Score', score], ['Signs confirmed', matches], ['Combo', comboStreak]].map(([label, value]) => <div key={label} className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center"><p className="text-xs font-semibold text-slate-300">{label}</p><p className="mt-2 text-2xl font-black text-emerald-300">{value}</p></div>)}</div>
+    <div className="grid gap-5 md:grid-cols-2">
+      <SignGuide target={target} />
+      <CameraPanel recognition={recognition} target={target} startLabel={started ? 'Resume session' : 'Start 30-second session'} onStart={() => { setStarted(true); recognition.start(); }} />
     </div>
-  );
+    <p className="mt-5 rounded-2xl border border-slate-700 bg-slate-900 p-5 text-sm leading-relaxed text-slate-300">✦ Build a run of confirmed signs to earn more points per sign. Every confirmed sign earns 5 XP.</p>
+  </GameLayout>;
 }

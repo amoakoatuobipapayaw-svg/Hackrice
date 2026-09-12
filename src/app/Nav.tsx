@@ -18,11 +18,11 @@ const linkClasses = ({ isActive }: { isActive: boolean }) =>
 export function Nav() {
   return (
     <header className="border-b border-slate-800">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
         <NavLink to="/" className="text-lg font-bold text-slate-100">
           {NAME}
         </NavLink>
-        <nav className="flex items-center gap-1">
+        <nav aria-label="Main navigation" className="flex flex-wrap items-center gap-1">
           {LINKS.map((link) => (
             <NavLink key={link.to} to={link.to} className={linkClasses}>
               {link.label}
