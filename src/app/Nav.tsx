@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { NAME } from "../lib/constants";
+import { HighContrastToggle } from "../components/ui/HighContrastToggle";
 
 const LINKS = [
   { to: "/", label: "Home" },
@@ -21,12 +22,13 @@ export function Nav() {
         <NavLink to="/" className="text-lg font-bold text-slate-100">
           {NAME}
         </NavLink>
-        <nav className="flex gap-1">
+        <nav className="flex items-center gap-1">
           {LINKS.map((link) => (
             <NavLink key={link.to} to={link.to} className={linkClasses}>
               {link.label}
             </NavLink>
           ))}
+          <HighContrastToggle />
         </nav>
       </div>
     </header>
