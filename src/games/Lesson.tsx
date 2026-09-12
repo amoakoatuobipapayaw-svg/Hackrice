@@ -14,7 +14,7 @@ import { completeRound, LESSON_LENGTH, scoreRound } from "./gameLogic";
 import { CameraPanel } from "./CameraPanel";
 import { GameLayout, ProfileGate } from "./GameLayout";
 import { RoundComplete } from "./RoundComplete";
-import { LETTER_CATALOG, pickSigns } from "./signCatalog";
+import { LETTER_CATALOG, pickSigns, speakableLetter } from "./signCatalog";
 
 import { SignGuide } from "./SignGuide";
 
@@ -50,7 +50,7 @@ export function Lesson() {
 
   useEffect(() => {
     if (!started || !target) return;
-    voiceRef.current.speak(`Sign ${target}`).catch(() => {});
+    voiceRef.current.speak(`Sign ${speakableLetter(target)}`).catch(() => {});
   }, [started, target]);
 
   useEffect(() => {
