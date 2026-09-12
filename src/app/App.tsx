@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 import { Home } from "./Home";
 import { Nav } from "./Nav";
@@ -5,9 +6,15 @@ import { Onboarding } from "./Onboarding";
 import { Lesson } from "../games/Lesson";
 import { MathMode } from "../games/MathMode";
 import { SpeedChallenge } from "../games/SpeedChallenge";
+import { recordActivity } from "../lib/activityLog";
 import { Leaderboard } from "../meta/Leaderboard";
 
 function App() {
+  // Every visit marks today on the streak calendar (see lib/activityLog.ts).
+  useEffect(() => {
+    recordActivity();
+  }, []);
+
   return (
     <div className="min-h-full">
       <a
@@ -17,7 +24,7 @@ function App() {
         Skip to main content
       </a>
       <Nav />
-      <main id="main-content" tabIndex={-1} className="lg:pl-56">
+      <main id="main-content" tabIndex={-1} className="lg:pl-60">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/onboarding" element={<Onboarding />} />

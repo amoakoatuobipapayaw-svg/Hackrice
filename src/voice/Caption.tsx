@@ -15,7 +15,7 @@ export function Caption({ caption, isSpeaking, isListening, isTranscribing }: Ca
     <div
       role="status"
       aria-live="polite"
-      className="rounded-lg border border-line bg-surface px-4 py-3 text-lg font-medium text-ink"
+      className="rounded-xl border-2 border-line bg-surface px-4 py-3 text-lg font-bold text-ink"
     >
       {isListening ? "Listening…" : isTranscribing ? "Reading that back…" : caption}
       {isSpeaking && caption ? <span className="sr-only"> (speaking)</span> : null}

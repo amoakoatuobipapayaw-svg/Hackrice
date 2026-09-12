@@ -98,12 +98,12 @@ export function MathMode() {
 
   return <GameLayout mode="Math lab" title="Solve and sign." description="Solve a little puzzle, then answer with your hand or your voice. Every answer is a number from 1 to 9." progress={problemIndex / MATH_ROUND_LENGTH} progressLabel={`${Math.min(problemIndex + 1, MATH_ROUND_LENGTH)} / ${MATH_ROUND_LENGTH} puzzles`}>
     <div className="grid gap-5 md:grid-cols-2">
-      <section className="flex flex-col rounded-2xl border border-line bg-surface p-6 sm:p-8">
-        <div className="flex justify-between text-xs font-bold tracking-widest text-ink uppercase"><span>Your puzzle</span><span>{correct} solved</span></div>
-        <div className="my-8 rounded-2xl border border-line bg-soft px-4 py-10 text-center"><h2 className="text-5xl font-bold tracking-tight sm:text-6xl">{problem.prompt}</h2><p className="mt-5 text-2xl font-bold text-ink">= <span className="inline-flex h-14 w-14 items-center justify-center rounded-xl border-2 border-dashed border-line">?</span></p></div>
+      <section className="flex flex-col rounded-2xl border-2 border-line bg-surface p-6 sm:p-8">
+        <div className="flex justify-between text-xs font-extrabold tracking-widest uppercase"><span className="text-brand">Your puzzle</span><span className="text-muted">{correct} solved</span></div>
+        <div className="my-8 rounded-2xl bg-soft px-4 py-10 text-center"><h2 className="text-5xl font-black tracking-tight sm:text-6xl">{problem.prompt}</h2><p className="mt-5 text-2xl font-bold text-ink">= <span className="inline-flex h-14 w-14 items-center justify-center rounded-xl border-2 border-dashed border-line">?</span></p></div>
         <h3 className="text-xl font-bold">Two ways to say it</h3>
         <p className="mt-3 text-sm leading-relaxed text-muted">Use one hand to sign your answer, then hold for a second. Prefer to speak? Tap the microphone below.</p>
-        <div className="mt-6 flex items-center gap-4 rounded-2xl border border-line bg-canvas p-4"><MicButton listen={voice.listen} isListening={voice.isListening} isTranscribing={voice.isTranscribing} onResult={handleVoiceAnswer} /><div><p className="text-sm font-bold">Answer by voice</p><p className="mt-1 text-xs text-muted">Say a number from one to nine</p></div></div>
+        <div className="mt-6 flex items-center gap-4 rounded-2xl border-2 border-line bg-canvas p-4"><MicButton listen={voice.listen} isListening={voice.isListening} isTranscribing={voice.isTranscribing} onResult={handleVoiceAnswer} /><div><p className="text-sm font-extrabold">Answer by voice</p><p className="mt-1 text-xs text-muted">Say a number from one to nine</p></div></div>
         <div className="mt-4"><Caption caption={voice.caption} isSpeaking={voice.isSpeaking} isListening={voice.isListening} isTranscribing={voice.isTranscribing} /></div>
         <p className="mt-auto pt-6 text-xs leading-relaxed text-muted">For 6–9, touch your thumb to your little, ring, middle, or index finger respectively.</p>
       </section>
