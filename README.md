@@ -12,6 +12,8 @@ npm run dev
 
 The app runs with **zero env vars** — Supabase, Persona, Gemini, and ElevenLabs all fall back to mocks/warnings so `npm run dev` never breaks. Fill in `.env.local` as real keys become available (see `.env.example`).
 
+**The Supabase database is already live** (one shared project for the whole team). Get `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from whoever holds the Vercel project — either they run `vercel env pull .env.local` and send you the two `VITE_` lines, or paste them in team chat (both are safe client-side per `CLAUDE.md`). Put them in your own `.env.local`; the schema is in `supabase/schema.sql` if you ever need to re-apply it.
+
 ## Where you work
 
 Repo structure mirrors `CLAUDE.md`. Stay in your folder; import shared types from `src/lib/contracts.ts`.

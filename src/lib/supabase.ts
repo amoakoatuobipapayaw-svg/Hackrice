@@ -1,33 +1,8 @@
 // supabase.ts — Postgres client + typed query helpers for profiles, scores,
 // and streaks. Owned by Workstream D.
 //
-// Schema (create in the Supabase SQL editor):
-//
-//   create table profiles (
-//     id uuid primary key default gen_random_uuid(),
-//     name text not null,
-//     streak int not null default 0,
-//     xp int not null default 0,
-//     level int not null default 1,
-//     verified boolean not null default false,
-//     last_active date,
-//     created_at timestamptz not null default now()
-//   );
-//
-//   create table scores (
-//     user_id uuid primary key references profiles(id) on delete cascade,
-//     name text not null,
-//     xp int not null default 0,
-//     verified boolean not null default false,
-//     updated_at timestamptz not null default now()
-//   );
-//
-//   create table streaks (
-//     user_id uuid primary key references profiles(id) on delete cascade,
-//     current_streak int not null default 0,
-//     longest_streak int not null default 0,
-//     last_active date
-//   );
+// Schema lives in supabase/schema.sql (source of truth — run it in the
+// Supabase SQL editor, or `psql "$POSTGRES_URL_NON_POOLING" -f supabase/schema.sql`).
 //
 // Until VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are set (in .env.local),
 // isSupabaseConfigured is false and every helper below returns local mock
