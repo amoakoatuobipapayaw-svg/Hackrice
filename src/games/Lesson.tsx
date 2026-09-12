@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "../components/ui/Button";
+import { Icon } from "../components/ui/Icon";
 import { Caption } from "../voice/Caption";
 import { useVoice } from "../voice/useVoice";
 import { useSignRecognition } from "../recognition/useSignRecognition";
@@ -14,7 +15,7 @@ import { completeRound, LESSON_LENGTH, scoreRound } from "./gameLogic";
 import { CameraPanel } from "./CameraPanel";
 import { GameLayout, ProfileGate } from "./GameLayout";
 import { RoundComplete } from "./RoundComplete";
-import { findUnit, isUnitUnlocked, LETTER_CATALOG, pickSigns } from "./signCatalog";
+import { findUnit, isUnitUnlocked, LETTER_CATALOG, pickSigns, speakableLetter } from "./signCatalog";
 
 import { SignGuide } from "./SignGuide";
 
@@ -53,7 +54,7 @@ export function Lesson() {
 
   useEffect(() => {
     if (!started || !target) return;
-    voiceRef.current.speak(`Sign ${target}`).catch(() => {});
+    voiceRef.current.speak(`Sign ${speakableLetter(target)}`).catch(() => {});
   }, [started, target]);
 
   useEffect(() => {
@@ -112,9 +113,9 @@ export function Lesson() {
       <SignGuide target={target ?? 'I'} targets={targets} completed={index} />
       <CameraPanel recognition={recognition} target={target} />
     </div>
-    <aside className="mt-5 flex gap-4 rounded-2xl border border-line bg-surface p-5" aria-label="Sign coach">
-      <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-soft text-xl text-brand">✦</span>
-      <div><h2 className="text-sm font-bold text-brand">Practice tip</h2><p role="status" className="mt-1 text-sm leading-relaxed text-muted">{recognition.coachingLine ?? 'Keep your wrist relaxed and your whole hand visible. There’s no timer here—take your time.'}</p><p className="mt-2 text-xs text-muted">AI coaching uses a hand-landmark summary while you practice.</p></div>
+    <aside className="mt-5 flex gap-4 rounded-2xl border-2 border-line bg-surface p-5" aria-label="Sign coach">
+      <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand"><Icon name="lightbulb" size={22} /></span>
+      <div><h2 className="text-sm font-extrabold text-brand">Practice tip</h2><p role="status" className="mt-1 text-sm leading-relaxed text-muted">{recognition.coachingLine ?? 'Keep your wrist relaxed and your whole hand visible. There’s no timer here—take your time.'}</p><p className="mt-2 text-xs text-muted">AI coaching uses a hand-landmark summary while you practice.</p></div>
     </aside>
     <div className="mt-4"><Caption caption={voice.caption} isSpeaking={voice.isSpeaking} isListening={voice.isListening} isTranscribing={voice.isTranscribing} /></div>
   </GameLayout>;

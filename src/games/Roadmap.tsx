@@ -1,9 +1,11 @@
-// The Duolingo-style unit path shown on Home. Units come from signCatalog's
+// The unit path shown on Home, styled to match the Icon-based list pattern
+// introduced alongside it (see Home.tsx). Units come from signCatalog's
 // UNITS list; lock state is derived from the classifier's DEMO_LETTERS /
 // DEMO_NUMBERS, so a unit unlocks itself the moment every sign in it is
 // promoted in src/recognition/signClassifier.ts — nothing here needs to
 // change when that happens.
 import { Link } from "react-router-dom";
+import { Icon, type IconName } from "../components/ui/Icon";
 import { isUnitUnlocked, UNITS, type Unit } from "./signCatalog";
 import { hasSeenWelcome } from "./welcomeProgress";
 
@@ -12,51 +14,50 @@ function unitHref(unit: Unit): string {
   return unit.vocabulary === "numbers" ? "/math" : `/lesson?unit=${unit.id}`;
 }
 
+function unitIcon(unit: Unit): IconName {
+  if (unit.kind === "content") return "bookOpen";
+  return unit.vocabulary === "numbers" ? "plus" : "hand";
+}
+
 export function Roadmap() {
   const unlockedCount = UNITS.filter(isUnitUnlocked).length;
   return (
-    <ol className="relative mx-auto mt-8 max-w-[280px] space-y-8 pb-8" aria-label="Course roadmap">
-      <li aria-hidden="true" className="absolute top-12 bottom-20 left-1/2 w-2 -translate-x-1/2 rounded-full bg-soft" />
-      {UNITS.map((unit, i) => {
-        const unlocked = isUnitUnlocked(unit);
-        const offset = i % 2 === 0 ? "-translate-x-8" : "translate-x-8";
-        const icon = unit.kind === "content" ? "📖" : unit.vocabulary === "numbers" ? "＋" : "✋";
-        const detail = unit.signs.join(" · ");
-        const seen = unit.kind === "content" && hasSeenWelcome();
-        const inner = (
-          <>
-            <span className="mb-3 rounded-lg border-2 border-line bg-surface px-3 py-1.5 text-[11px] font-extrabold tracking-wide text-brand">
-              {seen ? "✓ READ" : unlocked ? `UNIT ${i + 1}` : "COMING SOON"}
-            </span>
-            <span
-              aria-hidden="true"
-              className={`flex h-20 w-20 items-center justify-center rounded-full border-b-8 text-3xl font-extrabold transition-transform motion-reduce:transition-none ${
-                unlocked ? "border-brand-hover bg-brand text-white hover:-translate-y-1 active:translate-y-1" : "border-line bg-soft text-muted"
-              }`}
-            >
-              {unlocked ? icon : "🔒"}
-            </span>
-            <h2 className="mt-3 rounded-lg bg-canvas px-2 text-center text-base font-extrabold">{unit.title}</h2>
-            <p className="rounded-lg bg-canvas px-2 text-center text-xs text-muted">{detail}</p>
-          </>
-        );
-        return (
-          <li key={unit.id} className={`relative flex flex-col items-center ${offset}`}>
-            {unlocked ? (
-              <Link to={unitHref(unit)} aria-label={`${unit.title}: ${detail}`} className="flex flex-col items-center">
-                {inner}
-              </Link>
-            ) : (
-              <div aria-label={`${unit.title}: ${detail}, coming soon`} className="flex flex-col items-center opacity-70">
-                {inner}
-              </div>
-            )}
-          </li>
-        );
-      })}
-      <li className="pt-2 text-center text-xs text-muted">
-        {unlockedCount} of {UNITS.length} units unlocked. More unlock as recognition covers more signs.
-      </li>
-    </ol>
+    <>
+      <ol className="relative mt-8 space-y-4" aria-label="Course roadmap">
+        {UNITS.map((unit, i) => {
+          const unlocked = isUnitUnlocked(unit);
+          const seen = unit.kind === "content" && hasSeenWelcome();
+          const tag = seen ? "Read" : unlocked ? `Unit ${i + 1}` : "Coming soon";
+          const detail = unit.signs.join(" · ");
+          return (
+            <li key={unit.id} className="relative flex gap-5">
+              {i < UNITS.length - 1 && <span aria-hidden="true" className="absolute top-14 -bottom-4 left-[26px] w-1 rounded-full bg-line" />}
+              <span aria-hidden="true" className={`relative z-10 mt-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-b-4 ${unlocked ? "border-brand-hover bg-brand text-white ring-4 ring-brand-soft" : "border-line bg-surface text-muted ring-4 ring-canvas"}`}>
+                <Icon name={unlocked ? unitIcon(unit) : "lock"} size={unlocked ? 24 : 20} />
+              </span>
+              {unlocked ? (
+                <Link to={unitHref(unit)} aria-label={`${unit.title}: ${detail}`} className="group flex min-w-0 flex-1 items-center justify-between gap-4 rounded-2xl border-2 border-b-4 border-line bg-surface p-5 transition-colors hover:border-selected-line hover:bg-selected active:translate-y-0.5 active:border-b-2">
+                  <span className="min-w-0">
+                    <span className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-extrabold tracking-wide uppercase ${seen || i === 0 ? "bg-brand-soft text-brand" : "bg-soft text-muted"}`}>{tag}</span>
+                    <span className="mt-2 block text-lg font-extrabold">{unit.title}</span>
+                    <span className="mt-1 block text-sm leading-relaxed text-muted">{detail}</span>
+                  </span>
+                  <Icon name="arrowRight" size={22} className="text-muted transition-transform group-hover:translate-x-1 group-hover:text-brand motion-reduce:transition-none" />
+                </Link>
+              ) : (
+                <div aria-label={`${unit.title}: ${detail}, coming soon`} className="flex min-w-0 flex-1 items-center gap-4 rounded-2xl border-2 border-line bg-soft p-5 opacity-70">
+                  <span className="min-w-0">
+                    <span className="inline-block rounded-md bg-surface px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-muted uppercase">{tag}</span>
+                    <span className="mt-2 block text-lg font-extrabold text-muted">{unit.title}</span>
+                    <span className="mt-1 block text-sm leading-relaxed text-muted">{detail}</span>
+                  </span>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      <p className="mt-4 text-center text-xs text-muted">{unlockedCount} of {UNITS.length} units unlocked. More unlock as recognition covers more signs.</p>
+    </>
   );
 }

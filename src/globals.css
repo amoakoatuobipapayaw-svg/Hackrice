@@ -1,8 +1,10 @@
-/* Learning palette: white surfaces, blue actions, light-blue selected navigation. */
+/* Learning palette: white surfaces, blue actions, light-blue selected navigation.
+ * Rounded, friendly type (Nunito) with a system fallback if the font is offline. */
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --font-sans: system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Nunito", system-ui, "Segoe UI", Roboto, sans-serif;
   --color-canvas: #ffffff;
   --color-surface: #ffffff;
   --color-soft: #eef2f7;
@@ -11,7 +13,11 @@
   --color-muted: #5f6775;
   --color-brand: #2f5aa8;
   --color-brand-hover: #24488a;
+  --color-brand-soft: #e6edf9;
   --color-danger: #aa302c;
+  --color-danger-soft: #fbe9e8;
+  --color-success: #1f8a4c;
+  --color-success-soft: #e3f4ea;
   --color-selected: #e8f5fc;
   --color-selected-line: #99d8f5;
   --color-selected-ink: #12648c;
@@ -31,7 +37,11 @@ html[data-contrast="high"] {
   --color-muted: #eeeeee;
   --color-brand: #2563eb;
   --color-brand-hover: #1d4ed8;
+  --color-brand-soft: #0f2148;
   --color-danger: #ffb4ab;
+  --color-danger-soft: #3a1210;
+  --color-success: #4ade80;
+  --color-success-soft: #0f2a1a;
   --color-selected: #142d3b;
   --color-selected-line: #99d8f5;
   --color-selected-ink: #b7eaff;

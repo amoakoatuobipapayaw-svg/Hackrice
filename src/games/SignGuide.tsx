@@ -1,3 +1,5 @@
+import { Icon } from '../components/ui/Icon';
+
 const GUIDES: Record<string, { name: string; steps: string[] }> = {
   A: { name: 'How to sign A', steps: ['Make a fist with your palm facing the camera.', 'Rest your thumb alongside your fist, not across it.', 'Keep your wrist steady and upright.'] },
   B: { name: 'How to sign B', steps: ['Hold your four fingers straight up, touching.', 'Fold your thumb flat across your palm.', 'Keep your palm facing the camera.'] },
@@ -27,14 +29,14 @@ const GUIDES: Record<string, { name: string; steps: string[] }> = {
 
 export function SignGuide({ target, completed = 0, targets = [] }: { target: string; completed?: number; targets?: readonly string[] }) {
   const guide = GUIDES[target];
-  return <section className="flex h-full flex-col rounded-2xl border border-line bg-surface p-6 sm:p-8" aria-label={`Guide for ${target}`}>
-    <div className="flex items-center justify-between"><span className="text-xs font-bold tracking-widest text-brand uppercase">Your next hand shape</span><span className="rounded-full bg-soft px-3 py-1 text-xs text-muted">ASL · One hand</span></div>
-    <div className="my-6 flex items-center justify-center gap-6 rounded-2xl border border-line bg-soft py-7">
-      <span className="text-[100px] leading-none font-bold tracking-tight text-brand sm:text-[120px]">{target}</span>
+  return <section className="flex h-full flex-col rounded-2xl border-2 border-line bg-surface p-6 sm:p-8" aria-label={`Guide for ${target}`}>
+    <div className="flex items-center justify-between"><span className="text-xs font-extrabold tracking-widest text-brand uppercase">Your next hand shape</span><span className="rounded-full bg-soft px-3 py-1 text-xs font-bold text-muted">ASL · One hand</span></div>
+    <div className="my-6 flex items-center justify-center gap-6 rounded-2xl bg-soft py-7">
+      <span className="text-[100px] leading-none font-black tracking-tight text-brand sm:text-[120px]">{target}</span>
       <div className="max-w-28 text-sm leading-relaxed text-brand">Shape it.<br />Hold it.<br /><span className="font-bold text-brand">You’ve got this.</span></div>
     </div>
-    <h2 className="text-xl font-bold">{guide?.name ?? 'Keep your hand in view.'}</h2>
-    <ol className="mt-5 space-y-4">{guide?.steps.map((step, i) => <li key={step} className="flex gap-3 text-sm leading-relaxed text-muted"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-soft text-xs font-bold text-brand">{i + 1}</span>{step}</li>)}</ol>
-    {targets.length > 0 && <div className="mt-auto pt-7"><p className="mb-3 text-xs font-bold tracking-widest text-muted uppercase">Your five-sign journey</p><ol className="flex gap-2" aria-label="Lesson steps">{targets.map((letter, i) => <li key={i} aria-current={i === completed ? 'step' : undefined} aria-label={`${letter}: ${i < completed ? 'complete' : i === completed ? 'current' : 'up next'}`} className={`flex h-11 flex-1 items-center justify-center rounded-xl border-2 text-sm font-bold ${i < completed ? 'border-brand bg-brand text-white' : i === completed ? 'border-brand bg-soft text-ink' : 'border-line text-muted'}`}>{i < completed ? '✓' : letter}</li>)}</ol></div>}
+    <h2 className="text-xl font-extrabold">{guide?.name ?? 'Keep your hand in view.'}</h2>
+    <ol className="mt-5 space-y-4">{guide?.steps.map((step, i) => <li key={step} className="flex gap-3 text-sm leading-relaxed text-muted"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-extrabold text-brand">{i + 1}</span>{step}</li>)}</ol>
+    {targets.length > 0 && <div className="mt-auto pt-7"><p className="mb-3 text-xs font-extrabold tracking-widest text-muted uppercase">Your five-sign journey</p><ol className="flex gap-2" aria-label="Lesson steps">{targets.map((letter, i) => <li key={i} aria-current={i === completed ? 'step' : undefined} aria-label={`${letter}: ${i < completed ? 'complete' : i === completed ? 'current' : 'up next'}`} className={`flex h-11 flex-1 items-center justify-center rounded-xl border-2 text-sm font-bold ${i < completed ? 'border-brand bg-brand text-white' : i === completed ? 'border-brand bg-soft text-ink' : 'border-line text-muted'}`}>{i < completed ? <Icon name="check" size={18} strokeWidth={3} /> : letter}</li>)}</ol></div>}
   </section>;
 }

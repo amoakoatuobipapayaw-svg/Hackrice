@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "./Button";
+import { Icon } from "./Icon";
 
 const STORAGE_KEY = "signly:high-contrast";
 
@@ -43,9 +44,10 @@ export function HighContrastToggle() {
       aria-pressed={enabled}
       title="Toggle high-contrast colors"
       onClick={() => setEnabled((v) => !v)}
-      className="px-3 py-2 text-xs"
+      className="flex items-center justify-start gap-2 px-2.5 py-2 text-xs tracking-normal whitespace-nowrap"
     >
-      {enabled ? "High contrast: on" : "High contrast: off"}
+      <Icon name="contrast" size={16} />
+      <span className="sr-only sm:not-sr-only">{enabled ? "High contrast: on" : "High contrast: off"}</span>
     </Button>
   );
 }

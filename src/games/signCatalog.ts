@@ -57,3 +57,13 @@ export function isUnitUnlocked(unit: Unit): boolean {
 export function findUnit(id: string | null | undefined): Unit | undefined {
   return UNITS.find((unit) => unit.id === id);
 }
+
+// ElevenLabs' TTS mispronounces a bare "V" (comes out closer to "vye" than
+// "vee", audibly close to "phi") — verified via a TTS->STT round trip, where
+// it also scored a much lower confidence than the other catalog letters.
+// Spelling it phonetically fixes it; other catalog letters read correctly.
+const SPOKEN_LETTER: Record<string, string> = { V: "vee" };
+
+export function speakableLetter(letter: string): string {
+  return SPOKEN_LETTER[letter] ?? letter;
+}
