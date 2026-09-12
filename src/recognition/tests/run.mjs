@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-const temporary = mkdtempSync(join(tmpdir(),'signquest-tests-'));
+const temporary = mkdtempSync(join(tmpdir(),'signly-tests-'));
 try {
   mkdirSync(join(temporary,'tests'));
   for(const name of ['holdTracker.ts','signClassifier.ts','geminiCoach.ts','tests/core.test.ts']) {

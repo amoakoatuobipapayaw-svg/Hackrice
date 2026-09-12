@@ -4,15 +4,18 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { NAME, TAGLINE } from "../lib/constants";
 import { createLocalProfile } from "../lib/localProfile";
+import { setTtsEnabled } from "../voice/ttsPreference";
 
 export function Onboarding() {
   const [name, setName] = useState("");
+  const [speakAloud, setSpeakAloud] = useState(true);
   const navigate = useNavigate();
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
+    setTtsEnabled(speakAloud);
     createLocalProfile(trimmed);
     navigate("/");
   }
@@ -33,6 +36,27 @@ export function Onboarding() {
               className="rounded-lg border border-line bg-canvas px-3 py-2 text-base text-ink outline-none focus:border-brand"
             />
           </label>
+          <fieldset className="flex flex-col gap-2 text-sm font-medium text-muted">
+            <legend className="mb-1">Speak prompts and answers aloud?</legend>
+            <label className="flex items-center gap-2 font-normal text-ink">
+              <input
+                type="radio"
+                name="tts-preference"
+                checked={speakAloud}
+                onChange={() => setSpeakAloud(true)}
+              />
+              Yes, read things aloud to me
+            </label>
+            <label className="flex items-center gap-2 font-normal text-ink">
+              <input
+                type="radio"
+                name="tts-preference"
+                checked={!speakAloud}
+                onChange={() => setSpeakAloud(false)}
+              />
+              No thanks, text only
+            </label>
+          </fieldset>
           <Button type="submit" disabled={!name.trim()}>
             Start learning
           </Button>

@@ -1,6 +1,6 @@
-# SignQuest
+# Signly
 
-> Name is not final — see `src/lib/constants.ts`. Read `CLAUDE.md` and `PLAN.md` first; they are the source of truth for scope and workflow.
+> Formerly "SignQuest" — renamed 2026-09-12. Name still not guaranteed final — see `src/lib/constants.ts`. Read `CLAUDE.md` and `PLAN.md` first; they are the source of truth for scope and workflow.
 
 ## Quickstart
 

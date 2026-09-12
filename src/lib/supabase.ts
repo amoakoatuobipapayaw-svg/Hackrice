@@ -66,6 +66,29 @@ export async function postScore(entry: ScoreEntry): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Upserts the full profile row. Called once when a guest verifies via
+ * Persona (creating their account for the first time — see
+ * meta/PersonaGate.tsx) and again after every completed round to keep
+ * server-side XP/level/streak in sync with the local copy.
+ */
+export async function syncProfile(profile: UserProfile): Promise<void> {
+  if (!supabase) {
+    console.log("[supabase mock] syncProfile", profile);
+    return;
+  }
+
+  const { error } = await supabase.from("profiles").upsert({
+    id: profile.id,
+    name: profile.name,
+    streak: profile.streak,
+    xp: profile.xp,
+    level: profile.level,
+    verified: profile.verified,
+  });
+  if (error) throw error;
+}
+
 export async function getProfile(userId: string): Promise<UserProfile | null> {
   if (!supabase) return null;
 

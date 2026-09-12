@@ -1,4 +1,6 @@
-# PLAN.md — SignQuest build plan and work split
+# PLAN.md — Signly build plan and work split
+
+> **Naming note (2026-09-12):** the product was renamed from "SignQuest" to "Signly" — see CLAUDE.md.
 
 Team of 4, all coding through Claude Code from separate accounts. Web app first.
 Clock: hacking ends **Sunday 9:00 AM**, Devpost submission (with a 3-4 minute video) due **Sunday 8:45 AM**. It is Friday ~11 PM now. Sleep is allowed and encouraged; rotate.
@@ -81,7 +83,7 @@ export interface VoiceApi { speak(t: string): Promise<void>; listen(): Promise<s
 - Checkpoint 3 (Sat 10 PM): feature freeze, everything on `main`, demo rehearsed once.
 
 ## Devpost / video checklist (Phase 4)
-- 30s intro: name (SignQuest), team, Games & Gamification track, the challenges (Gemini, ElevenLabs, Persona, Solana), the problem (learning ASL is hard and Deaf communities are underserved by audio-first apps).
+- 30s intro: name (Signly), team, Games & Gamification track, the challenges (Gemini, ElevenLabs, Persona, Solana), the problem (learning ASL is hard and Deaf communities are underserved by audio-first apps).
 - 2m demo: the golden loop live, then show streaks, leaderboard with a verified name, Math mode answered by sign AND by voice.
 - 30s technical: MediaPipe for real-time landmarks, Gemini for coaching, ElevenLabs for the voice bridge, Supabase + Vercel, Persona for the bot-free leaderboard.
 - 30s impact: who this helps and where it goes next.

@@ -97,7 +97,7 @@ function Readout({recognition:r,target}: {recognition:Omit<Recognition, 'videoRe
 export function RecognitionPreview() {
   const [mock,setMock] = useState(true);
   return <main className="mx-auto min-h-screen max-w-3xl space-y-4 bg-slate-50 p-6 font-sans text-slate-900">
-    <h1 className="text-3xl font-bold">SignQuest · Recognition lab</h1>
+    <h1 className="text-3xl font-bold">Signly · Recognition lab</h1>
     <p>Start with the mock to check scoring, then try the webcam.</p>
     <ModelCheck />
     <label><input type="checkbox" checked={mock} onChange={event => setMock(event.target.checked)} /> Mock mode</label>

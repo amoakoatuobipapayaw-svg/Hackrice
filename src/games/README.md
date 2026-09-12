@@ -1,4 +1,4 @@
-# SignQuest game experience
+# Signly game experience
 
 The visual layout follows the sidebar, winding learning path, raised buttons,
 and progress-card patterns in https://github.com/sanidhyy/duolingo-clone.

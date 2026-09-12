@@ -1,14 +1,21 @@
 import { useEffect, useState } from "react";
 import { Button } from "./Button";
 
-const STORAGE_KEY = "signquest:high-contrast";
+const STORAGE_KEY = "signly:high-contrast";
 
+/** Saved choice wins; otherwise respect the OS "increase contrast" setting. */
 function readInitial(): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) === "1";
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === "1") return true;
+    if (saved === "0") return false;
   } catch {
-    return false;
+    // localStorage unavailable (private mode etc.) — fall through to OS hint
   }
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-contrast: more)").matches
+  );
 }
 
 /** Shared dumb-ish toggle: flips a data attribute on <html> that globals.css
@@ -34,6 +41,7 @@ export function HighContrastToggle() {
       type="button"
       variant="ghost"
       aria-pressed={enabled}
+      title="Toggle high-contrast colors"
       onClick={() => setEnabled((v) => !v)}
       className="px-3 py-2 text-xs"
     >

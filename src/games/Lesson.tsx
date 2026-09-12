@@ -4,10 +4,11 @@
 // round once all five are confirmed.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { Button } from "../components/ui/Button";
 import { Caption } from "../voice/Caption";
 import { useVoice } from "../voice/useVoice";
 import { useSignRecognition } from "../recognition/useSignRecognition";
-import type { RoundResult, SignResult, UserProfile } from "../lib/contracts";
+import type { RoundResult, UserProfile } from "../lib/contracts";
 import { getLocalProfile } from "../lib/localProfile";
 import { completeRound, LESSON_LENGTH, scoreRound } from "./gameLogic";
 import { CameraPanel } from "./CameraPanel";
@@ -22,6 +23,7 @@ export function Lesson() {
   const [searchParams] = useSearchParams();
   const unit = findUnit(searchParams.get("unit"));
   const unitCatalog = unit && unit.vocabulary === "letters" && isUnitUnlocked(unit) ? unit.signs : LETTER_CATALOG;
+  const [started, setStarted] = useState(false);
   const targets = useMemo(() => pickSigns(LESSON_LENGTH, unitCatalog), [unitCatalog]);
   const [index, setIndex] = useState(0);
   const [result, setResult] = useState<RoundResult | null>(null);
@@ -34,21 +36,25 @@ export function Lesson() {
 
   const target = targets[index] as string | undefined;
 
-  function handleConfirm(confirmedResult: SignResult) {
+  function handleConfirm() {
     if (!target || result) return;
-    voiceRef.current.speak(confirmedResult.label).catch(() => {});
     setIndex((i) => i + 1);
   }
 
-  const recognition = useSignRecognition({ target, vocabulary: "letters", coaching: true, onConfirm: handleConfirm });
+  const recognition = useSignRecognition({
+    target: started ? target : undefined,
+    vocabulary: "letters",
+    coaching: true,
+    onConfirm: handleConfirm,
+  });
 
   const recognitionRef = useRef(recognition);
   useEffect(() => { recognitionRef.current = recognition; });
 
   useEffect(() => {
-    if (!target) return;
+    if (!started || !target) return;
     voiceRef.current.speak(`Sign ${target}`).catch(() => {});
-  }, [target]);
+  }, [started, target]);
 
   useEffect(() => {
     if (index < LESSON_LENGTH || !profile || result) return;
@@ -60,6 +66,30 @@ export function Lesson() {
 
   if (!profile) return <ProfileGate />;
 
+  if (!started) {
+    return (
+      <GameLayout
+        mode="Guided practice"
+        title={unit ? unit.title : "Learn five signs."}
+        description="Learn five shapes at your own pace. Follow the guide, sign to your camera, and hold steady to move forward."
+        progress={0}
+        progressLabel="Ready when you are"
+      >
+        <div className="rounded-2xl border border-line bg-surface p-8 text-center sm:p-14">
+          <span aria-hidden="true" className="text-5xl">✋</span>
+          <h2 className="mt-5 text-2xl font-bold">Take a moment to get ready.</h2>
+          <p className="mx-auto mt-3 max-w-md leading-relaxed text-muted">
+            Once you start, we'll speak each prompt aloud and turn on your camera. Find good
+            lighting and make sure your whole hand will be in view.
+          </p>
+          <Button className="mt-7" onClick={() => setStarted(true)}>
+            Start practice
+          </Button>
+        </div>
+      </GameLayout>
+    );
+  }
+
   if (result) {
     return (
       <div className="px-4 py-16">
@@ -68,6 +98,7 @@ export function Lesson() {
           profile={profile}
           onRetry={() => {
             recognition.reset();
+            setStarted(false);
             setIndex(0);
             setResult(null);
           }}
@@ -85,6 +116,6 @@ export function Lesson() {
       <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-soft text-xl text-brand">✦</span>
       <div><h2 className="text-sm font-bold text-brand">Practice tip</h2><p role="status" className="mt-1 text-sm leading-relaxed text-muted">{recognition.coachingLine ?? 'Keep your wrist relaxed and your whole hand visible. There’s no timer here—take your time.'}</p><p className="mt-2 text-xs text-muted">AI coaching uses a hand-landmark summary while you practice.</p></div>
     </aside>
-    <div className="mt-4"><Caption caption={voice.caption} isSpeaking={voice.isSpeaking} isListening={voice.isListening} /></div>
+    <div className="mt-4"><Caption caption={voice.caption} isSpeaking={voice.isSpeaking} isListening={voice.isListening} isTranscribing={voice.isTranscribing} /></div>
   </GameLayout>;
 }
