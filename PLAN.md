@@ -3,7 +3,7 @@
 Team of 4, all coding through Claude Code from separate accounts. Web app first.
 Clock: hacking ends **Sunday 9:00 AM**, Devpost submission (with a 3-4 minute video) due **Sunday 8:45 AM**. It is Friday ~11 PM now. Sleep is allowed and encouraged; rotate.
 
-**Status: Phase 0 is done and pushed to `main`.** D's scaffold (contracts.ts, app shell, Supabase helpers, /api proxies, meta components, and stub+mock files in recognition/games/voice) is on `main`. The Supabase database is live (see below) — `npm run dev` now talks to real data once you pull `.env.local` values. `npm run build` still works standalone with no env vars. Still open from D's list: Persona template ID, Vercel deploy of the actual app, Solana stretch. A/B/C: pull `main` and start replacing stub internals in your folder.
+**Status: Phase 1 core is landing on `main`.** `feat/voice` (C, real ElevenLabs speak/listen + a11y pass) and `feat/recognition` (A, real MediaPipe hand tracking + geometric classifier, 13 passing unit tests) are both merged. `api/coach.ts` is live and returning real Gemini coaching lines (migrated to the new Interactions API — `generateContent` is deprecated, see git log). Supabase is live. Deployed at **https://signquest-flame.vercel.app**. Sign → recognition → coaching is wireable end to end now; B's game screens are next to actually call it from a real Lesson flow instead of the stub pages. Still open from D's list: `ELEVENLABS_API_KEY` in Vercel, Persona template ID, Solana stretch.
 
 ## The four workstreams
 
