@@ -3,24 +3,22 @@
 // just supplies the target, speaks prompts/results aloud, and scores the
 // round once all five are confirmed.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
 import { Caption } from "../voice/Caption";
 import { useVoice } from "../voice/useVoice";
 import { useSignRecognition } from "../recognition/useSignRecognition";
-import type { RoundResult, UserProfile } from "../lib/contracts";
+import type { RoundResult, SignResult, UserProfile } from "../lib/contracts";
 import { getLocalProfile } from "../lib/localProfile";
 import { completeRound, LESSON_LENGTH, scoreRound } from "./gameLogic";
 import { CameraPanel } from "./CameraPanel";
 import { GameLayout, ProfileGate } from "./GameLayout";
 import { RoundComplete } from "./RoundComplete";
-import { LETTER_CATALOG, pickSigns, speakableLetter } from "./signCatalog";
+import { LETTER_CATALOG, pickSigns } from "./signCatalog";
 
 import { SignGuide } from "./SignGuide";
 
 export function Lesson() {
   const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
-  const [started, setStarted] = useState(false);
   const targets = useMemo(() => pickSigns(LESSON_LENGTH, LETTER_CATALOG), []);
   const [index, setIndex] = useState(0);
   const [result, setResult] = useState<RoundResult | null>(null);
@@ -33,25 +31,21 @@ export function Lesson() {
 
   const target = targets[index] as string | undefined;
 
-  function handleConfirm() {
+  function handleConfirm(confirmedResult: SignResult) {
     if (!target || result) return;
+    voiceRef.current.speak(confirmedResult.label).catch(() => {});
     setIndex((i) => i + 1);
   }
 
-  const recognition = useSignRecognition({
-    target: started ? target : undefined,
-    vocabulary: "letters",
-    coaching: true,
-    onConfirm: handleConfirm,
-  });
+  const recognition = useSignRecognition({ target, vocabulary: "letters", coaching: true, onConfirm: handleConfirm });
 
   const recognitionRef = useRef(recognition);
   useEffect(() => { recognitionRef.current = recognition; });
 
   useEffect(() => {
-    if (!started || !target) return;
-    voiceRef.current.speak(`Sign ${speakableLetter(target)}`).catch(() => {});
-  }, [started, target]);
+    if (!target) return;
+    voiceRef.current.speak(`Sign ${target}`).catch(() => {});
+  }, [target]);
 
   useEffect(() => {
     if (index < LESSON_LENGTH || !profile || result) return;
@@ -63,30 +57,6 @@ export function Lesson() {
 
   if (!profile) return <ProfileGate />;
 
-  if (!started) {
-    return (
-      <GameLayout
-        mode="Guided practice"
-        title="Learn five signs."
-        description="Learn five shapes at your own pace. Follow the guide, sign to your camera, and hold steady to move forward."
-        progress={0}
-        progressLabel="Ready when you are"
-      >
-        <div className="rounded-2xl border border-line bg-surface p-8 text-center sm:p-14">
-          <span aria-hidden="true" className="text-5xl">✋</span>
-          <h2 className="mt-5 text-2xl font-bold">Take a moment to get ready.</h2>
-          <p className="mx-auto mt-3 max-w-md leading-relaxed text-muted">
-            Once you start, we'll speak each prompt aloud and turn on your camera. Find good
-            lighting and make sure your whole hand will be in view.
-          </p>
-          <Button className="mt-7" onClick={() => setStarted(true)}>
-            Start practice
-          </Button>
-        </div>
-      </GameLayout>
-    );
-  }
-
   if (result) {
     return (
       <div className="px-4 py-16">
@@ -95,7 +65,6 @@ export function Lesson() {
           profile={profile}
           onRetry={() => {
             recognition.reset();
-            setStarted(false);
             setIndex(0);
             setResult(null);
           }}

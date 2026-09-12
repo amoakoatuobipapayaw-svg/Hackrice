@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Icon } from "../components/ui/Icon";
-import { NAME, TAGLINE } from "../lib/constants";
+import { LogoMark, Wordmark } from "../components/ui/Logo";
 import { createLocalProfile } from "../lib/localProfile";
 import { setTtsEnabled } from "../voice/ttsPreference";
+
+const TILT = ["-rotate-3", "rotate-2", "-rotate-1", "rotate-3", "-rotate-2"];
 
 export function Onboarding() {
   const [name, setName] = useState("");
@@ -26,16 +28,36 @@ export function Onboarding() {
       active ? "border-selected-line bg-selected text-selected-ink" : "border-line text-ink hover:bg-soft"
     }`;
 
+  const letters = name.replace(/[^a-z]/gi, "").slice(0, 10).toUpperCase().split("");
+
   return (
-    <div className="mx-auto flex max-w-md flex-col items-center gap-6 px-4 py-12 text-center sm:py-16">
-      <span aria-hidden="true" className="flex h-16 w-16 items-center justify-center rounded-2xl border-b-4 border-brand-hover bg-brand text-white">
-        <Icon name="hand" size={32} />
-      </span>
-      <div>
-        <h1 className="text-3xl font-black tracking-tight">Welcome to {NAME}</h1>
-        <p className="mt-2 text-muted">{TAGLINE}</p>
+    <div className="mx-auto grid max-w-5xl items-center gap-10 px-4 py-10 lg:grid-cols-[1.1fr_1fr] lg:py-20">
+      <div className="text-center lg:text-left">
+        <div className="inline-flex items-center gap-3">
+          <LogoMark size={56} />
+          <Wordmark className="text-4xl" />
+        </div>
+        <h1 className="mt-6 text-4xl leading-tight font-black tracking-tight sm:text-5xl">
+          Say it with <span className="marker-underline">your hands</span>.
+        </h1>
+        <p className="mx-auto mt-4 max-w-md text-lg leading-relaxed text-muted lg:mx-0">
+          Learn American Sign Language by signing to your webcam and getting feedback on every shape. Lessons, speed rounds and math puzzles, all scored live.
+        </p>
+        <div className="mt-8 flex min-h-12 flex-wrap justify-center gap-1.5 lg:justify-start" aria-live="polite" aria-label={letters.length ? `${name} fingerspelled` : undefined}>
+          {letters.length === 0 ? (
+            <p className="text-sm font-bold text-muted">Type your name and watch it get fingerspelled.</p>
+          ) : (
+            letters.map((letter, i) => (
+              <span key={i} className={`flex h-12 w-11 flex-col items-center justify-center rounded-lg border-b-4 text-xl font-black shadow-sm ${TILT[i % TILT.length]} ${i % 3 === 1 ? "border-accent-ink/30 bg-accent text-accent-ink" : "border-line bg-surface text-brand"}`}>
+                {letter}
+                <span className="-mt-1 text-[8px] font-bold tracking-widest text-current/60">ASL</span>
+              </span>
+            ))
+          )}
+        </div>
       </div>
-      <Card className="w-full text-left">
+
+      <Card className="w-full">
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <label className="flex flex-col gap-2 text-sm font-extrabold">
             What should we call you?
@@ -63,12 +85,11 @@ export function Onboarding() {
           <Button type="submit" disabled={!name.trim()}>
             Start learning
           </Button>
+          <p className="text-center text-xs text-muted">
+            No account needed. Verify later to post scores to the public leaderboard.
+          </p>
         </form>
       </Card>
-      <p className="text-xs text-muted">
-        You can verify your identity later to post scores to the public
-        leaderboard.
-      </p>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { Icon, type IconName } from '../components/ui/Icon';
+import { LogoMark } from '../components/ui/Logo';
 import { getActivityDays } from '../lib/activityLog';
 import { getLocalProfile, saveLocalProfile } from '../lib/localProfile';
 import { syncProfile } from '../lib/supabase';
@@ -8,17 +9,53 @@ import { PersonaGate } from '../meta/PersonaGate';
 import { StreakCalendar } from '../meta/StreakCalendar';
 import { XpBar } from '../meta/StreakXp';
 
-const ACTIVITIES: Array<{ to: string; icon: IconName; title: string; detail: string; tag: string; meta: string }> = [
-  { to: '/lesson', icon: 'hand', title: 'Your first five signs', detail: 'Learn I, L, V, W and Y with a step-by-step guide and live camera feedback.', tag: 'Start here', meta: '5 signs · Guided' },
-  { to: '/math', icon: 'plus', title: 'Count on your hands', detail: 'Solve five small puzzles and answer by signing the number or saying it out loud.', tag: 'Math practice', meta: '5 puzzles · Numbers 1–9' },
-  { to: '/speed', icon: 'zap', title: 'Find your rhythm', detail: 'Thirty seconds on the clock. Chain confirmed signs together for combo points.', tag: 'Speed practice', meta: '30 seconds · Timed' },
+type Tone = 'brand' | 'accent' | 'success';
+
+const ACTIVITIES: Array<{ to: string; icon: IconName; title: string; detail: string; tag: string; meta: string; tone: Tone }> = [
+  { to: '/lesson', icon: 'hand', title: 'Your first five signs', detail: 'Learn I, L, V, W and Y with a step-by-step guide and live camera feedback.', tag: 'Start here', meta: '5 signs · Guided', tone: 'brand' },
+  { to: '/math', icon: 'plus', title: 'Count on your hands', detail: 'Solve five small puzzles and answer by signing the number or saying it out loud.', tag: 'Math practice', meta: '5 puzzles · Numbers 1–9', tone: 'accent' },
+  { to: '/speed', icon: 'zap', title: 'Find your rhythm', detail: 'Thirty seconds on the clock. Chain confirmed signs together for combo points.', tag: 'Speed practice', meta: '30 seconds · Timed', tone: 'success' },
 ];
+
+const NODE: Record<Tone, string> = {
+  brand: 'border-brand-hover bg-brand text-white',
+  accent: 'border-accent-ink/40 bg-accent text-accent-ink',
+  success: 'border-success/60 bg-success text-white',
+};
+const TAG: Record<Tone, string> = {
+  brand: 'bg-brand-soft text-brand',
+  accent: 'bg-accent/30 text-accent-ink',
+  success: 'bg-success-soft text-success',
+};
 
 const TIPS: Array<{ icon: IconName; text: string }> = [
   { icon: 'sun', text: 'Face a window or a soft light.' },
   { icon: 'hand', text: 'Keep your whole hand in view.' },
   { icon: 'timer', text: 'Hold each sign for one second.' },
 ];
+
+const TILE_TILT = ['-rotate-3', 'rotate-2', '-rotate-1', 'rotate-3', '-rotate-2'];
+
+/** Scrabble-style tiles spelling the user's name: ASL is fingerspelled
+ * letter by letter, so the first thing a learner sees is their own name
+ * broken into the shapes they're about to learn. */
+function FingerspellName({ name }: { name: string }) {
+  const letters = name.replace(/[^a-z]/gi, '').slice(0, 10).toUpperCase().split('');
+  if (letters.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+      <p className="text-xs font-extrabold tracking-widest text-muted uppercase">Your name, fingerspelled</p>
+      <ol className="flex flex-wrap gap-1.5" aria-label={`${name}, one tile per letter`}>
+        {letters.map((letter, i) => (
+          <li key={i} className={`flex h-10 w-9 flex-col items-center justify-center rounded-lg border-b-4 text-lg font-black shadow-sm transition-transform hover:rotate-0 hover:-translate-y-1 motion-reduce:transition-none ${TILE_TILT[i % TILE_TILT.length]} ${i % 3 === 1 ? 'border-accent-ink/30 bg-accent text-accent-ink' : 'border-line bg-surface text-brand'}`}>
+            {letter}
+            <span className="-mt-1 text-[8px] font-bold tracking-widest text-current/60">ASL</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
 
 export function Home() {
   const [profile, setProfile] = useState(getLocalProfile);
@@ -35,9 +72,9 @@ export function Home() {
     await syncProfile(updated);
   }
   const stats: Array<{ icon: IconName; label: string; value: string; title: string; tone: string }> = [
-    { icon: 'flame', label: 'streak', value: `${profile.streak} day${profile.streak === 1 ? '' : 's'}`, title: 'Current day streak', tone: 'text-brand' },
+    { icon: 'flame', label: 'streak', value: `${profile.streak} day${profile.streak === 1 ? '' : 's'}`, title: 'Current day streak', tone: profile.streak > 0 ? 'text-accent-ink' : 'text-muted' },
     { icon: 'star', label: 'xp', value: `${profile.xp} XP`, title: 'Total XP earned', tone: 'text-brand' },
-    { icon: 'shield', label: 'level', value: `Level ${profile.level}`, title: 'Current level', tone: 'text-muted' },
+    { icon: 'shield', label: 'level', value: `Level ${profile.level}`, title: 'Current level', tone: 'text-success' },
   ];
 
   return <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8">
@@ -50,22 +87,31 @@ export function Home() {
 
     <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_300px]">
       <section aria-label="Learning path">
-        <div className="flex items-center justify-between gap-6 rounded-2xl border-b-4 border-brand-hover bg-brand p-6 text-white sm:p-8">
-          <div>
-            <p className="text-xs font-extrabold tracking-widest uppercase opacity-90">Unit 1 · Getting started</p>
-            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Let your hands do the talking</h1>
-            <p className="mt-2 max-w-md text-sm leading-relaxed opacity-90">Build confidence with letters and numbers. Welcome back, {profile.name}.</p>
+        <div className="relative overflow-hidden rounded-3xl border-b-8 border-brand-hover bg-brand p-6 text-white sm:p-9">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.12]" style={{ backgroundImage: 'radial-gradient(#fff 1.4px, transparent 1.6px)', backgroundSize: '22px 22px' }} />
+          <div aria-hidden="true" className="pointer-events-none absolute -right-8 -bottom-12 hidden opacity-20 sm:block animate-float"><LogoMark size={220} className="[&_rect]:fill-transparent" /></div>
+          <div className="relative">
+            <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-extrabold tracking-widest uppercase"><span className="h-1.5 w-1.5 rounded-full bg-accent" />Unit 1 · Getting started</p>
+            <h1 className="mt-4 max-w-lg text-3xl leading-tight font-black tracking-tight sm:text-4xl">Let your hands do the <span className="marker-underline text-white">talking</span>.</h1>
+            <p className="mt-3 max-w-md text-base leading-relaxed text-white/85">Welcome back, {profile.name}. Twenty-six letters, ten numbers, one camera. Let's pick up where you left off.</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link to="/lesson" className="inline-flex items-center gap-2 rounded-xl border-b-4 border-accent-ink/40 bg-accent px-5 py-3 text-sm font-black tracking-wide text-accent-ink uppercase hover:brightness-105 active:translate-y-0.5 active:border-b-2">Start practicing<Icon name="arrowRight" size={16} strokeWidth={2.5} /></Link>
+              <Link to="/speed" className="inline-flex items-center gap-2 rounded-xl border-2 border-white/40 px-5 py-3 text-sm font-extrabold tracking-wide text-white uppercase hover:bg-white/10">30-second round</Link>
+            </div>
           </div>
-          <span aria-hidden="true" className="hidden h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white/15 sm:flex"><Icon name="hand" size={40} strokeWidth={1.75} /></span>
+        </div>
+
+        <div className="mt-6 rounded-2xl border-2 border-dashed border-line px-5 py-4">
+          <FingerspellName name={profile.name} />
         </div>
 
         <ol className="relative mt-8 space-y-4" aria-label="Practice modes">
           {ACTIVITIES.map((activity, i) => <li key={activity.to} className="relative flex gap-5">
-            {i < ACTIVITIES.length - 1 && <span aria-hidden="true" className="absolute top-14 -bottom-4 left-[26px] w-1 rounded-full bg-line" />}
-            <span aria-hidden="true" className={`relative z-10 mt-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-b-4 ${i === 0 ? 'border-brand-hover bg-brand text-white ring-4 ring-brand-soft' : 'border-line bg-surface text-brand ring-4 ring-canvas'}`}><Icon name={activity.icon} size={24} /></span>
-            <Link to={activity.to} className="group flex min-w-0 flex-1 items-center justify-between gap-4 rounded-2xl border-2 border-b-4 border-line bg-surface p-5 transition-colors hover:border-selected-line hover:bg-selected active:translate-y-0.5 active:border-b-2">
+            {i < ACTIVITIES.length - 1 && <span aria-hidden="true" className="absolute top-14 -bottom-4 left-[26px] w-1 rounded-full border-l-4 border-dotted border-line" />}
+            <span aria-hidden="true" className={`relative z-10 mt-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-b-4 ring-4 ring-canvas ${NODE[activity.tone]}`}><Icon name={activity.icon} size={24} strokeWidth={2.5} /></span>
+            <Link to={activity.to} className="group flex min-w-0 flex-1 items-center justify-between gap-4 rounded-2xl border-2 border-b-4 border-line bg-surface p-5 transition-[transform,border-color,background-color] hover:-translate-y-0.5 hover:border-selected-line hover:bg-selected active:translate-y-0.5 active:border-b-2 motion-reduce:transition-none">
               <span className="min-w-0">
-                <span className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-extrabold tracking-wide uppercase ${i === 0 ? 'bg-brand-soft text-brand' : 'bg-soft text-muted'}`}>{activity.tag}</span>
+                <span className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-extrabold tracking-wide uppercase ${TAG[activity.tone]}`}>{activity.tag}</span>
                 <span className="mt-2 block text-lg font-extrabold">{activity.title}</span>
                 <span className="mt-1 block text-sm leading-relaxed text-muted">{activity.detail}</span>
                 <span className="mt-2 block text-xs font-bold text-muted">{activity.meta}</span>
@@ -75,30 +121,28 @@ export function Home() {
           </li>)}
         </ol>
 
-        <div className="mt-6 flex items-start gap-4 rounded-2xl border-2 border-dashed border-line p-5">
-          <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-soft text-muted"><Icon name="sparkles" size={20} /></span>
-          <div><h2 className="font-extrabold">One step at a time</h2><p className="mt-1 text-sm leading-relaxed text-muted">Start with hand shapes. Movement and conversation lessons are still to come.</p></div>
-        </div>
+        <p className="mt-6 text-sm leading-relaxed text-muted">More units are on the way — movement, facial grammar and real conversations. For now, hand shapes are where everyone starts.</p>
       </section>
 
       <aside className="space-y-5" aria-label="Your learning progress">
         <StreakCalendar activeDays={activeDays} streak={profile.streak} />
 
         <section className="rounded-2xl border-2 border-line bg-surface p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div><h2 className="text-lg font-extrabold">Your progress</h2><p className="mt-1 text-sm text-muted">Every confirmed sign earns 5 XP.</p></div>
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand" aria-hidden="true"><Icon name="star" size={22} /></span>
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-extrabold">Your progress</h2>
+            <span className="text-sm font-bold text-muted">{profile.xp} XP total</span>
           </div>
-          <div className="mt-5"><XpBar profile={profile} /></div>
+          <div className="mt-4"><XpBar profile={profile} /></div>
+          <p className="mt-3 text-xs text-muted">Every confirmed sign earns 5 XP. {100 - (profile.xp % 100)} XP to the next level.</p>
           <Link to="/lesson" className="mt-5 flex items-center justify-center gap-2 rounded-xl border-2 border-b-4 border-brand-hover bg-brand py-3 text-center text-sm font-extrabold tracking-wide text-white uppercase hover:bg-brand-hover active:translate-y-0.5 active:border-b-2">Keep learning<Icon name="arrowRight" size={16} /></Link>
         </section>
 
         <section className="rounded-2xl border-2 border-line bg-surface p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div><h2 className="text-lg font-extrabold">Better together</h2></div>
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand" aria-hidden="true"><Icon name="trophy" size={22} /></span>
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-ink" aria-hidden="true"><Icon name="trophy" size={20} /></span>
+            <h2 className="text-lg font-extrabold">Better together</h2>
           </div>
-          <p className="mt-2 text-sm leading-relaxed text-muted">{profile.verified ? 'Your streak and XP are saved to your account and count on the leaderboard.' : "You're practicing as a guest. XP shows for this session, but nothing is saved. Verify once to create your account, save your streak, and join the leaderboard."}</p>
+          <p className="mt-3 text-sm leading-relaxed text-muted">{profile.verified ? 'Your streak and XP are saved to your account and count on the leaderboard.' : "You're practicing as a guest. XP shows for this session, but nothing is saved. Verify once to create your account, save your streak, and join the leaderboard."}</p>
           <Link to="/leaderboard" className="mt-4 inline-flex items-center gap-1.5 text-sm font-extrabold text-brand uppercase hover:underline underline-offset-4">View leaderboard<Icon name="arrowRight" size={16} /></Link>
           {!profile.verified && import.meta.env.VITE_PERSONA_TEMPLATE_ID && <div className="mt-5 border-t-2 border-line pt-4"><PersonaGate onVerified={handleVerified} /></div>}
         </section>

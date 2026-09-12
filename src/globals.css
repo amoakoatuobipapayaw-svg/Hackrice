@@ -18,6 +18,8 @@
   --color-danger-soft: #fbe9e8;
   --color-success: #1f8a4c;
   --color-success-soft: #e3f4ea;
+  --color-accent: #f6c343;
+  --color-accent-ink: #5b3f00;
   --color-selected: #e8f5fc;
   --color-selected-line: #99d8f5;
   --color-selected-ink: #12648c;
@@ -42,9 +44,27 @@ html[data-contrast="high"] {
   --color-danger-soft: #3a1210;
   --color-success: #4ade80;
   --color-success-soft: #0f2a1a;
+  --color-accent: #ffd76a;
+  --color-accent-ink: #000000;
   --color-selected: #142d3b;
   --color-selected-line: #99d8f5;
   --color-selected-ink: #b7eaff;
 }
 html[data-contrast="high"] .text-brand { color: #bfdbfe; }
 html[data-contrast="high"] :focus-visible { outline-color: #ffffff; }
+
+/* Small bits of motion that make the brand feel alive; all respect reduced motion. */
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes marker { from { background-size: 0% 40%; } to { background-size: 100% 40%; } }
+.animate-float { animation: float 4s ease-in-out infinite; }
+.marker-underline {
+  background-image: linear-gradient(transparent 60%, var(--color-accent) 60%);
+  background-repeat: no-repeat;
+  background-size: 100% 40%;
+  background-position: 0 100%;
+  padding: 0 0.1em;
+  animation: marker 0.8s ease-out 0.2s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-float, .marker-underline { animation: none; }
+}
