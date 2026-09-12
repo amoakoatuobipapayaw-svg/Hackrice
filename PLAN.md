@@ -44,7 +44,7 @@ Owns `src/lib/`, `src/meta/`, `src/app/`, and `/api`.
 - [x] Streaks and XP: `StreakXp.tsx` (badge + level bar), `bumpStreak()` in `supabase.ts`.
 - [x] Leaderboard UI (`meta/Leaderboard.tsx`) with realtime subscription, currently rendering mock rows until Supabase is live.
 - [ ] **Solana badge (stretch)**: `solanaBadge.ts`, mint a devnet achievement when a user hits a streak milestone. Only after everything else works.
-- [ ] Deploy to Vercel early so there is always a live URL. **Not done yet — do this next.**
+- [x] Deploy to Vercel — **live at https://signquest-flame.vercel.app**. `vercel.json` added with a catch-all rewrite so client-side routes (`/leaderboard`, `/lesson`, etc.) don't 404 on refresh/direct visit. `/api/coach`, `/api/tts`, `/api/stt` will 500 until `GEMINI_API_KEY`/`ELEVENLABS_API_KEY` are set in Vercel. Not auto-deploying on push yet — the Vercel project isn't Git-connected because it's linked under a personal Vercel account without access to the team's GitHub repo; redeploy manually with `vercel deploy --prod` for now, or sort out repo access if you want auto-deploy.
 
 ## Shared interfaces (these go in src/lib/contracts.ts, D writes them first)
 Everyone codes to these. Exact names matter so imports line up.
