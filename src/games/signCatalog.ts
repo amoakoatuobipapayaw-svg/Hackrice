@@ -1,6 +1,6 @@
 // MVP sign catalogs Lesson/Speed Challenge draw prompts from. Recognition's
 // real classifier (src/recognition/signClassifier.ts) only reliably confirms
-// the letters I, L, V, W, Y and digits 0-9 today — other letters exist but
+// the letters I, L, V, W, Y and digits 1-9 today — other letters exist but
 // score below the confirmation threshold on purpose, and word signs like
 // "THANK YOU" exist in the mock only (see src/recognition/README.md).
 // CLAUDE.md's golden demo line ("sign THANK YOU") isn't achievable with the

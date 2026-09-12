@@ -1,11 +1,11 @@
-// Single-digit arithmetic so the answer is always signable (0-9) or
+// Single-digit arithmetic so the answer is always signable (1-9) or
 // speakable as one word — matches the recognition MVP's number scope.
 export type MathProblem = { prompt: string; answer: number };
 
 export function generateMathProblem(): MathProblem {
   const a = Math.floor(Math.random() * 6) + 1; // 1..6
   const b = Math.floor(Math.random() * (10 - a)); // a+b stays <= 9
-  if (Math.random() < 0.5 && a >= b) {
+  if (Math.random() < 0.5 && a > b) {
     return { prompt: `${a} − ${b}`, answer: a - b };
   }
   return { prompt: `${a} + ${b}`, answer: a + b };
