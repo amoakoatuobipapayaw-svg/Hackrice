@@ -31,7 +31,7 @@ export function ProfileGate() {
       <span aria-hidden="true" className="text-5xl">✦</span>
       <h2 className="mt-5 text-2xl font-bold">Make this journey yours</h2>
       <p className="mx-auto mt-3 max-w-md leading-relaxed text-muted">Choose a name to keep your practice progress and XP together. You can set up your camera when you’re ready.</p>
-      <Link to="/onboarding" className="mt-7 inline-block rounded-2xl border border-brand bg-brand px-7 py-3 font-bold text-white hover:bg-brand-hover">Choose your name →</Link>
+      <Link to="/onboarding" className="mt-7 inline-block rounded-2xl border-2 border-b-4 border-brand-hover bg-brand px-7 py-3 font-bold text-white hover:bg-brand-hover">Choose your name →</Link>
     </div>
   </GameLayout>;
 }

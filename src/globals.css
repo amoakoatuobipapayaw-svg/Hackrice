@@ -1,17 +1,20 @@
-/* Shared palette: warm paper, readable ink, and one green action color. */
+/* Learning palette: white surfaces, green actions, blue selected navigation. */
 @import "tailwindcss";
 
 @theme {
   --font-sans: system-ui, "Segoe UI", Roboto, sans-serif;
-  --color-canvas: #f6f5f0;
+  --color-canvas: #ffffff;
   --color-surface: #ffffff;
-  --color-soft: #eeeee6;
-  --color-line: #d4d6cc;
-  --color-ink: #272d27;
-  --color-muted: #596157;
-  --color-brand: #376346;
-  --color-brand-hover: #294c35;
+  --color-soft: #f1f4ee;
+  --color-line: #e2e5df;
+  --color-ink: #3c4238;
+  --color-muted: #646c5e;
+  --color-brand: #427e08;
+  --color-brand-hover: #326006;
   --color-danger: #aa302c;
+  --color-selected: #e8f5fc;
+  --color-selected-line: #99d8f5;
+  --color-selected-ink: #12648c;
 }
 
 html, body, #root { min-height: 100%; }
@@ -29,6 +32,9 @@ html[data-contrast="high"] {
   --color-brand: #28673c;
   --color-brand-hover: #205632;
   --color-danger: #ffb4ab;
+  --color-selected: #142d3b;
+  --color-selected-line: #99d8f5;
+  --color-selected-ink: #b7eaff;
 }
 html[data-contrast="high"] .text-brand { color: #b9efc8; }
 html[data-contrast="high"] :focus-visible { outline-color: #ffffff; }
