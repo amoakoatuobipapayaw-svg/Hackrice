@@ -4,7 +4,9 @@
 // recognition (see CLAUDE.md).
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+// Gemini's Interactions API (generateContent is deprecated — see
+// https://ai.google.dev/gemini-api/docs/interactions-breaking-changes-may-2026).
+const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
@@ -17,16 +19,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "summary (string) is required" });
   }
 
-  const prompt = `You are a friendly ASL coach. In one short sentence (max 15 words), give one concrete tip to improve this attempt: ${summary}`;
-
-  const geminiRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-    },
-  );
+  const geminiRes = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+    body: JSON.stringify({
+      model: MODEL,
+      system_instruction:
+        "You are a friendly ASL coach. In one short sentence (max 15 words), give one concrete tip to improve the user's attempt.",
+      input: summary,
+      store: false,
+    }),
+  });
 
   if (!geminiRes.ok) {
     const text = await geminiRes.text();
@@ -34,10 +37,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const data = (await geminiRes.json()) as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
+    steps?: { type?: string; content?: { type?: string; text?: string }[] }[];
   };
+  const modelOutput = data.steps?.find((step) => step.type === "model_output");
   const line: string =
-    data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "Keep practicing!";
+    modelOutput?.content?.find((c) => c.type === "text")?.text?.trim() ?? "Keep practicing!";
 
   return res.status(200).json({ line });
 }
