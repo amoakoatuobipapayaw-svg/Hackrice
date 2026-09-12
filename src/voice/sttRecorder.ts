@@ -93,7 +93,13 @@ function waitForSilence(stream: MediaStream): Promise<void> {
   });
 }
 
-export async function recordAndTranscribe(): Promise<string> {
+function log(message: string): void {
+  console.debug(`[stt] ${message}`);
+}
+
+export type SttPhase = "recording" | "transcribing";
+
+export async function recordAndTranscribe(onPhase?: (phase: SttPhase) => void): Promise<string> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   const recorder = new MediaRecorder(stream);
   const chunks: BlobPart[] = [];
@@ -104,6 +110,7 @@ export async function recordAndTranscribe(): Promise<string> {
   });
 
   recorder.start();
+  onPhase?.("recording");
   await waitForSilence(stream);
   log("silence detected, stopping recorder");
   recorder.stop();
