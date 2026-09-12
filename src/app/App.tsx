@@ -5,6 +5,7 @@ import { Onboarding } from "./Onboarding";
 import { Lesson } from "../games/Lesson";
 import { MathMode } from "../games/MathMode";
 import { SpeedChallenge } from "../games/SpeedChallenge";
+import { Welcome } from "../games/Welcome";
 import { Leaderboard } from "../meta/Leaderboard";
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
           <Route path="/lesson" element={<Lesson />} />
           <Route path="/speed" element={<SpeedChallenge />} />
           <Route path="/math" element={<MathMode />} />
+          <Route path="/welcome" element={<Welcome />} />
         </Routes>
       </main>
     </div>

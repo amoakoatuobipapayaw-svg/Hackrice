@@ -86,7 +86,19 @@ is still a geometric score and does not mean 98% measured accuracy.
 The letter/number vocabulary separates overlapping shapes (for example V versus 2).
 The desired target never forces the classifier's answer. The thumb and occlusion
 rules for A/E/M/N/S/T in particular need real-camera calibration or a trained classifier.
-J and Z require motion and are unsupported. Word signs, including THANK YOU,
+
+J and Z now have a real (but equally untested) recognition path: `motionClassifier.ts`
+buffers the tracked fingertip's position while the hand holds a motion-candidate
+handshape (`motionCandidateShape()` — the I shape for J, a bare index point for Z),
+then scores the resulting trajectory against a small geometric template for each
+letter (a downward hook for J, a horizontal-diagonal-horizontal zigzag for Z),
+direction-agnostic so it doesn't assume a particular handedness or camera-mirroring
+convention. `useSignRecognition.ts` latches a detected gesture as `current` for
+~1.3s so the existing hold-to-confirm tracker — built for a held pose, not a
+momentary motion — gets a real window to confirm it; `holdTracker.ts` itself is
+unchanged. J and Z share signClassifier's `CONFIDENCE_CAP` table and start at the
+same untested 0.5 tier as any other never-live-tested letter — promote them the
+same one-line way, after testing on a real camera. Word signs, including THANK YOU,
 exist in the mock only; full-word recognition is not implemented.
 
 No WLASL or other external training dataset has been adopted. Test fixtures are
@@ -128,7 +140,10 @@ The tests use the existing TypeScript dependency and Node's built-in test runner
 They check hold timing/release, tracking loss, target changes, basic geometric
 invariance, vocabulary separation, digits 1–9, thumb-related V/W false positives,
 video aspect ratio, invalid landmarks, varying contact scores, rejection of
-near-miss reps and the coaching API contract (13 tests).
+near-miss reps and the coaching API contract (13 tests in `core.test.ts`), plus
+J/Z trajectory recognition, mirror/scale invariance, J-vs-Z disambiguation, static
+holds never registering as motion, and motion-candidate handshape gating
+(11 tests in `motion.test.ts`) — 24 total.
 
 Setup note for D: with npm 12, the incoming lockfile failed `npm ci` because two
 `@emnapi` entries were missing. This session used `npm install --package-lock=false`

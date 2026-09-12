@@ -18,19 +18,22 @@ export function pickSigns(count: number, catalog: readonly string[] = LETTER_CAT
   return picks;
 }
 
-export type Unit = {
-  id: string;
-  title: string;
-  vocabulary: "letters" | "numbers";
-  signs: readonly string[];
-};
+// A content unit is a non-camera lesson (grammar/vocabulary explanation) —
+// always "unlocked" since it doesn't depend on recognition at all.
+export type ContentUnit = { id: string; title: string; kind: "content"; signs: readonly string[] };
+// A practice unit is a camera lesson scoped to one recognition vocabulary.
+export type PracticeUnit = { id: string; title: string; kind?: "practice"; vocabulary: "letters" | "numbers"; signs: readonly string[] };
+export type Unit = ContentUnit | PracticeUnit;
 
 // Grouped by handshape family (a teaching heuristic, not a linguistic
 // classification) so each unit builds on a motor pattern the learner just
-// practiced. Every static letter and digit appears in exactly one unit;
-// J and Z need a temporal trajectory the classifier doesn't track yet, so
-// their unit can never unlock until that lands.
+// practiced. Every static letter and digit appears in exactly one practice
+// unit. J and Z are motion signs (motionClassifier.ts) with no live-camera
+// validation yet, so — like every other never-tested sign — they stay capped
+// below the confirm threshold in signClassifier's CONFIDENCE_CAP table until
+// promoted, which is what unlocks motion-letters below.
 export const UNITS: readonly Unit[] = [
+  { id: "welcome", title: "Welcome to ASL", kind: "content", signs: ["HELLO", "THANK YOU", "PLEASE", "SORRY", "MY NAME IS", "NICE TO MEET YOU"] },
   { id: "numbers-1-9", title: "Counting practice", vocabulary: "numbers", signs: ["1", "2", "3", "4", "5", "6", "7", "8", "9"] },
   { id: "core-five", title: "Getting started", vocabulary: "letters", signs: ["I", "L", "V", "W", "Y"] },
   { id: "fist-shapes", title: "Fist shapes", vocabulary: "letters", signs: ["A", "E", "M", "N", "S", "T"] },
@@ -41,11 +44,12 @@ export const UNITS: readonly Unit[] = [
   { id: "motion-letters", title: "Motion letters", vocabulary: "letters", signs: ["J", "Z"] },
 ];
 
-function unitCatalog(unit: Unit): readonly string[] {
+function unitCatalog(unit: PracticeUnit): readonly string[] {
   return unit.vocabulary === "numbers" ? DEMO_NUMBERS : DEMO_LETTERS;
 }
 
 export function isUnitUnlocked(unit: Unit): boolean {
+  if (unit.kind === "content") return true;
   const demo = unitCatalog(unit);
   return unit.signs.every((sign) => demo.includes(sign));
 }

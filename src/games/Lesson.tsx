@@ -22,7 +22,7 @@ export function Lesson() {
   const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
   const [searchParams] = useSearchParams();
   const unit = findUnit(searchParams.get("unit"));
-  const unitCatalog = unit && unit.vocabulary === "letters" && isUnitUnlocked(unit) ? unit.signs : LETTER_CATALOG;
+  const unitCatalog = unit && unit.kind !== "content" && unit.vocabulary === "letters" && isUnitUnlocked(unit) ? unit.signs : LETTER_CATALOG;
   const [started, setStarted] = useState(false);
   const targets = useMemo(() => pickSigns(LESSON_LENGTH, unitCatalog), [unitCatalog]);
   const [index, setIndex] = useState(0);

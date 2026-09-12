@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { HandLandmarker } from './handLandmarker';
 import { loadHandLandmarker, drawLandmarks } from './handLandmarker';
-import { classifySign } from './signClassifier';
+import { classifySign, computeHandFrame } from './signClassifier';
+import { classifyMotion, motionCandidateShape, type MotionSample } from './motionClassifier';
 import { geminiCoach } from './geminiCoach';
 import { useRecognitionState } from './useRecognitionState';
 import type { Recognition, RecognitionOptions } from './types';
+import type { SignResult } from '../lib/contracts';
+
+// How long a completed J/Z trajectory is buffered before a gesture must
+// finish (MOTION_WINDOW_MS), and how long its result is then latched as
+// `current` (MOTION_LATCH_MS) so the existing hold-to-confirm tracker — built
+// for a held static pose, not a momentary gesture — gets a real ~1s window
+// to see a stable label and confirm it. No change needed in holdTracker.ts.
+const MOTION_WINDOW_MS = 1500;
+const MOTION_LATCH_MS = 1300;
 
 export function useSignRecognition(options: RecognitionOptions = {}): Recognition {
   const { current, confirmed, correctReps, holdProgress, reset, clearHold, accept, optionsRef } = useRecognitionState(options);
@@ -22,11 +32,16 @@ export function useSignRecognition(options: RecognitionOptions = {}): Recognitio
   const frame = useRef(0);
   const coach = useRef<AbortController|null>(null);
   const startupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const motionShape = useRef<'J'|'Z'|null>(null);
+  const motionBuffer = useRef<MotionSample[]>([]);
+  const motionLatch = useRef<{result: SignResult; until: number} | null>(null);
+  const resetMotion = () => { motionShape.current = null; motionBuffer.current = []; motionLatch.current = null; };
   const cleanup = useCallback(() => {
     session.current++; active.current = false; cancelAnimationFrame(frame.current);
     if (startupTimer.current) clearTimeout(startupTimer.current);
     startupTimer.current = null;
     coach.current?.abort(); coach.current = null;
+    resetMotion();
     stream.current?.getTracks().forEach(track => { track.onended = null; track.stop(); });
     stream.current = null; model.current?.close(); model.current = null;
     if (videoRef.current) { videoRef.current.pause(); videoRef.current.srcObject = null; }
@@ -73,9 +88,30 @@ export function useSignRecognition(options: RecognitionOptions = {}): Recognitio
               lastVideoTime = video.currentTime; lastInference = now;
               const points = detector.detectForVideo(video,now).landmarks[0];
               const settings = optionsRef.current;
-              const current = points ? classifySign(points, {
-                vocabulary:settings.vocabulary,aspectRatio:video.videoWidth/video.videoHeight,
-              }) : null;
+              const aspectRatio = video.videoWidth/video.videoHeight;
+              let current: SignResult | null = points ? classifySign(points, { vocabulary:settings.vocabulary, aspectRatio }) : null;
+              if ((settings.vocabulary ?? 'letters') === 'letters') {
+                const latch = motionLatch.current;
+                if (latch && now < latch.until) {
+                  current = latch.result;
+                } else {
+                  motionLatch.current = null;
+                  const handFrame = points ? computeHandFrame(points, aspectRatio) : null;
+                  const shape = handFrame ? motionCandidateShape(handFrame) : null;
+                  if (shape !== motionShape.current) { motionShape.current = shape; motionBuffer.current = []; }
+                  if (shape && handFrame) {
+                    const tip = shape === 'J' ? handFrame.p[20] : handFrame.p[8];
+                    const cutoff = now - MOTION_WINDOW_MS;
+                    motionBuffer.current = [...motionBuffer.current.filter(s => s.t >= cutoff),
+                      { x: tip.x, y: tip.y, t: now, scale: handFrame.scale }];
+                    const motionResult = classifyMotion(motionBuffer.current, shape);
+                    if (motionResult) {
+                      motionLatch.current = { result: motionResult, until: now + MOTION_LATCH_MS };
+                      current = motionResult;
+                    }
+                  }
+                }
+              }
               accept(current,now);
               if (canvasRef.current) drawLandmarks(canvasRef.current,video,points);
               if (settings.coaching && points && !coach.current && now-lastCoach >= 5000) {
@@ -105,6 +141,7 @@ export function useSignRecognition(options: RecognitionOptions = {}): Recognitio
   }, [cleanup,accept,clearHold,optionsRef]);
   useEffect(() => {
     coach.current?.abort();
+    resetMotion();
   }, [options.coaching,options.target,options.vocabulary]);
   useEffect(() => {
     const hidden = () => { if (document.hidden) stop(); };

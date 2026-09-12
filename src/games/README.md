@@ -18,13 +18,29 @@ Lesson targets and unit lock state are DERIVED, not hardcoded: `signCatalog.ts`'
 there (see that file's `CONFIDENCE_CAP` table) is what surfaces it in lessons and
 unlocks its unit — nothing in `src/games/` needs to change for that. Today only
 `core-five` (I/L/V/W/Y) and `numbers-1-9` (1-9) are unlocked; the rest of the
-alphabet has classifier rules but scores below the confirm threshold until tested
-live and promoted. `Lesson.tsx` reads a `?unit=<id>` query param (set by
-`Roadmap.tsx`'s links) to scope its five targets to one unit, falling back to the
-full unlocked letter catalog if the param is absent, unknown, or not yet unlocked.
+alphabet (including J/Z, which now have a real but equally untested motion-based
+path — see `recognition/README.md`) has classifier rules but scores below the
+confirm threshold until tested live and promoted. `Lesson.tsx` reads a `?unit=<id>`
+query param (set by `Roadmap.tsx`'s links) to scope its five targets to one unit,
+falling back to the full unlocked letter catalog if the param is absent, unknown,
+or not yet unlocked.
+
+`UNITS` also holds one **content unit** (`kind: "content"`), rendered by
+`Welcome.tsx` at `/welcome` instead of `Lesson.tsx` — a non-camera, non-scored
+lesson covering ASL grammar/modality (it isn't signed English; facial expression,
+body position, space and movement all carry meaning) plus a small preview of
+everyday signs (HELLO, THANK YOU, PLEASE, SORRY, MY NAME IS, NICE TO MEET YOU).
+Those signs are instructional content only — recognition doesn't support word
+signs yet — and are explicitly flagged in the UI as unreviewed by a fluent ASL
+signer or Deaf educator; treat them as a placeholder for real content review, not
+as authoritative. `welcomeProgress.ts` tracks a local "seen it" flag (not XP/streak
+state, kept out of `contracts.ts`/`localProfile.ts` on purpose) so `Roadmap.tsx`
+can show "✓ READ" once visited. `isUnitUnlocked()` treats every content unit as
+always unlocked.
 
 - `GameLayout.tsx`: mode navigation, page headings, progress and profile entry.
 - `Roadmap.tsx`: the unit path rendered on Home; locked/unlocked state per unit.
+- `Welcome.tsx`: the "Welcome to ASL" content unit (grammar orientation + everyday-sign preview).
 - `SignGuide.tsx`: three-step hand-shape instructions and lesson milestones,
   covering every static letter (not just the currently-unlocked ones) so a unit
   is ready to use the moment it unlocks.

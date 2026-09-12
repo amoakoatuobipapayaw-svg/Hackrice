@@ -5,8 +5,10 @@
 // change when that happens.
 import { Link } from "react-router-dom";
 import { isUnitUnlocked, UNITS, type Unit } from "./signCatalog";
+import { hasSeenWelcome } from "./welcomeProgress";
 
 function unitHref(unit: Unit): string {
+  if (unit.kind === "content") return `/${unit.id}`;
   return unit.vocabulary === "numbers" ? "/math" : `/lesson?unit=${unit.id}`;
 }
 
@@ -18,12 +20,13 @@ export function Roadmap() {
       {UNITS.map((unit, i) => {
         const unlocked = isUnitUnlocked(unit);
         const offset = i % 2 === 0 ? "-translate-x-8" : "translate-x-8";
-        const icon = unit.vocabulary === "numbers" ? "＋" : "✋";
+        const icon = unit.kind === "content" ? "📖" : unit.vocabulary === "numbers" ? "＋" : "✋";
         const detail = unit.signs.join(" · ");
+        const seen = unit.kind === "content" && hasSeenWelcome();
         const inner = (
           <>
             <span className="mb-3 rounded-lg border-2 border-line bg-surface px-3 py-1.5 text-[11px] font-extrabold tracking-wide text-brand">
-              {unlocked ? `UNIT ${i + 1}` : "COMING SOON"}
+              {seen ? "✓ READ" : unlocked ? `UNIT ${i + 1}` : "COMING SOON"}
             </span>
             <span
               aria-hidden="true"
