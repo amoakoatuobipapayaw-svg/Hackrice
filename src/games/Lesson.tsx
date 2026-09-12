@@ -7,7 +7,7 @@ import { Button } from "../components/ui/Button";
 import { Caption } from "../voice/Caption";
 import { useVoice } from "../voice/useVoice";
 import { useSignRecognition } from "../recognition/useSignRecognition";
-import type { RoundResult, SignResult, UserProfile } from "../lib/contracts";
+import type { RoundResult, UserProfile } from "../lib/contracts";
 import { getLocalProfile } from "../lib/localProfile";
 import { completeRound, LESSON_LENGTH, scoreRound } from "./gameLogic";
 import { CameraPanel } from "./CameraPanel";
@@ -32,9 +32,8 @@ export function Lesson() {
 
   const target = targets[index] as string | undefined;
 
-  function handleConfirm(confirmedResult: SignResult) {
+  function handleConfirm() {
     if (!target || result) return;
-    voiceRef.current.speak(confirmedResult.label).catch(() => {});
     setIndex((i) => i + 1);
   }
 
