@@ -3,7 +3,7 @@
 Team of 4, all coding through Claude Code from separate accounts. Web app first.
 Clock: hacking ends **Sunday 9:00 AM**, Devpost submission (with a 3-4 minute video) due **Sunday 8:45 AM**. It is Friday ~11 PM now. Sleep is allowed and encouraged; rotate.
 
-**Status: Phase 0 is done on `main`.** D's scaffold (contracts.ts, app shell, Supabase helpers, /api proxies, meta components, and stub+mock files in recognition/games/voice) is committed to `main` locally, ready to push. `npm run dev` and `npm run build` work with no env vars set. Still open from D's list: real Supabase project + keys, Persona template ID, Vercel deploy, Solana stretch. A/B/C: pull `main` and start replacing stub internals in your folder.
+**Status: Phase 0 is done and pushed to `main`.** D's scaffold (contracts.ts, app shell, Supabase helpers, /api proxies, meta components, and stub+mock files in recognition/games/voice) is on `main`. The Supabase database is live (see below) — `npm run dev` now talks to real data once you pull `.env.local` values. `npm run build` still works standalone with no env vars. Still open from D's list: Persona template ID, Vercel deploy of the actual app, Solana stretch. A/B/C: pull `main` and start replacing stub internals in your folder.
 
 ## The four workstreams
 
@@ -38,7 +38,7 @@ Owns `src/voice/`.
 Owns `src/lib/`, `src/meta/`, `src/app/`, and `/api`.
 - [x] **First job, hour one**: write `src/lib/contracts.ts` and merge to `main`. Nothing else starts cleanly until this exists.
 - [x] Scaffold the Vite + React + TS + Tailwind app, routing, Home, Nav, onboarding screen.
-- [x] `supabase.ts` query helpers (`getLeaderboard`, `postScore`, `getProfile`, `bumpStreak`), with mock fallback until a real project exists. **TODO:** create the actual Supabase project + `profiles`/`scores`/`streaks` tables (schema is documented at the top of `supabase.ts`) and drop the URL/anon key into `.env.local`.
+- [x] `supabase.ts` query helpers (`getLeaderboard`, `postScore`, `getProfile`, `bumpStreak`), with mock fallback if env vars are missing. **Live**: Supabase project provisioned through the Vercel Marketplace, `supabase/schema.sql` applied (tables + permissive RLS + realtime on `scores`). `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` are set in Vercel (Production, Development — Preview hit a CLI bug, add manually via the dashboard if you need preview deploys) and in `.env.local`. Get the same two values from whoever holds the Vercel project and drop them in your own `.env.local` to point at the same shared database.
 - [x] Serverless proxies in `/api`: `coach.ts` (Gemini), `tts.ts` and `stt.ts` (ElevenLabs). Keys server-side, read from `process.env`. **TODO:** set `GEMINI_API_KEY` / `ELEVENLABS_API_KEY` in Vercel.
 - [x] **Persona gate**: `PersonaGate.tsx` loads the sandbox SDK and flips a local `verified` flag. **TODO:** get a real `VITE_PERSONA_TEMPLATE_ID` and wire `verified` through to the leaderboard once Supabase is live.
 - [x] Streaks and XP: `StreakXp.tsx` (badge + level bar), `bumpStreak()` in `supabase.ts`.
