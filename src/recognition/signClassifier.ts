@@ -1,8 +1,93 @@
-// TODO(A): given a frame of 21 hand landmarks, return the best-guess
-// letter/number/word as a SignResult. Start rule-based on finger extension
-// state for A-Z and 0-9 (see PLAN.md).
-import type { SignResult } from "../lib/contracts";
+import type { SignResult } from '../lib/contracts';
+import type { Landmark, Vocabulary } from './types';
 
-export function classifySign(_landmarks: unknown): SignResult {
-  throw new Error("classifySign not implemented — see src/recognition/signClassifier.ts");
+// J and Z require a temporal trajectory, not a static hand shape.
+export const MOTION_SIGNS = ['J', 'Z'] as const;
+export const DEMO_LETTERS = ['I', 'L', 'V', 'W', 'Y'] as const;
+export const EXPERIMENTAL_LETTERS = ['A','B','C','D','E','F','G','H','K','M','N','O','P','Q','R','S','T','U','X'] as const;
+const distance = (a: Landmark, b: Landmark) => Math.hypot(a.x-b.x, a.y-b.y, a.z-b.z);
+function angle(a: Landmark, b: Landmark, c: Landmark) {
+  const u = [a.x-b.x, a.y-b.y, a.z-b.z];
+  const v = [c.x-b.x, c.y-b.y, c.z-b.z];
+  const denominator = Math.hypot(...u) * Math.hypot(...v);
+  return denominator < 1e-8 ? 0 : Math.acos(Math.max(-1, Math.min(1,
+    u.reduce((sum, value, i) => sum + value*v[i], 0) / denominator))) * 180 / Math.PI;
 }
+
+/** Heuristic match scores, NOT calibrated probabilities or ASL proficiency scores.
+ * Pass letters/numbers from game mode, never the desired answer as a candidate filter.
+ * Raw (unmirrored) MediaPipe image coordinates are expected.
+ */
+export function classifySign(points: readonly Landmark[], options: {
+  vocabulary?: Vocabulary; aspectRatio?: number;
+} = {}): SignResult | null {
+  if (points.length !== 21 || points.some(p => ![p.x,p.y,p.z].every(Number.isFinite))) return null;
+  const aspect = options.aspectRatio ?? 1;
+  if (!Number.isFinite(aspect) || aspect <= 0) return null;
+  // MediaPipe x/z use image-width units; convert y to the same metric.
+  const p = points.map(point => ({ ...point, y: point.y / aspect }));
+  const scale = distance(p[0], p[9]);
+  if (scale < 0.025 || distance(p[5],p[17]) < 0.015) return null;
+  const d = (a: number, b: number) => distance(p[a],p[b])/scale;
+  const bases = [5,9,13,17];
+  const straight = bases.map(b => angle(p[b],p[b+1],p[b+3]) > 155 &&
+    angle(p[b+1],p[b+2],p[b+3]) > 150 && d(b+3,0) > d(b+1,0)*1.08);
+  const [index,middle,ring,pinky] = straight;
+  const thumbOut = angle(p[2],p[3],p[4]) > 150 && d(4,17) > 1.25 && d(4,5) > 0.65;
+  const match = (label: string, confidence = 0.65): SignResult => ({label, confidence});
+  const contact = [8,12,16,20].map(tip => d(4,tip) < 0.30);
+  const rounded = !straight.some(Boolean) && bases.every(b => angle(p[b],p[b+1],p[b+3]) > 65);
+  if (options.vocabulary === 'numbers') {
+    if (contact[3] && index && middle && ring) return match('6',0.85);
+    if (contact[2] && index && middle && pinky) return match('7',0.85);
+    if (contact[1] && index && ring && pinky) return match('8',0.85);
+    if (contact[0] && middle && ring && pinky) return match('9',0.85);
+    if (rounded && contact[0]) return match('0',0.65);
+    if (index && middle && ring && pinky) return match(thumbOut ? '5' : '4',0.85);
+    if (index && middle && !ring && !pinky) return match(thumbOut ? '3' : '2',0.85);
+    if (index && !middle && !ring && !pinky && !thumbOut) return match('1',0.85);
+    return null;
+  }
+  if (contact[0] && middle && ring && pinky) return match('F');
+  if (!index && !middle && !ring && pinky) return match(thumbOut ? 'Y' : 'I',0.85);
+  if (index && middle && ring && !pinky && !thumbOut) return match('W',0.85);
+  if (index && middle && ring && pinky && !thumbOut &&
+      d(8,12) < 0.4 && d(12,16) < 0.4 && d(16,20) < 0.4) return match('B');
+  const dx = p[8].x-p[5].x, dy = p[8].y-p[5].y;
+  const horizontal = Math.abs(dx) > Math.abs(dy)*1.5;
+  const downward = dy > Math.abs(dx)*0.7;
+  if (index && !middle && !ring && !pinky) {
+    if (thumbOut) return match(downward ? 'Q' : horizontal ? 'G' : 'L', !horizontal && !downward ? 0.85 : 0.6);
+    if (contact[1]) return match('D');
+    return null; // Index-only shape is ambiguous without more thumb evidence.
+  }
+  if (index && middle && !ring && !pinky) {
+    if (thumbOut && d(4,10) < 0.65) return match(downward ? 'P' : 'K');
+    if (thumbOut) return null; // An extended thumb is not the U/V hand shape.
+    if (horizontal) return match('H');
+    const tipDelta = p[8].x-p[12].x, baseDelta = p[5].x-p[9].x;
+    if (tipDelta*baseDelta < 0) return match('R',0.55);
+    return match(d(8,12) > 0.4 ? 'V' : 'U',d(8,12) > 0.4 ? 0.85 : 0.65);
+  }
+  if (rounded) {
+    if (contact[0]) return match('O');
+    if (d(4,8) > 0.35 && d(4,8) < 1.0) return match('C',0.55);
+  }
+  if (!straight.some(Boolean)) {
+    if (d(8,0) > d(6,0) && angle(p[5],p[6],p[8]) > 70) return match('X',0.55);
+    // Occluded thumb placement is inherently weak in a single camera view.
+    const axis = {x:p[17].x-p[5].x,y:p[17].y-p[5].y,z:p[17].z-p[5].z};
+    const project = (i: number) => ((p[i].x-p[5].x)*axis.x + (p[i].y-p[5].y)*axis.y +
+      (p[i].z-p[5].z)*axis.z) / distance(p[17],p[5])**2;
+    const thumb = project(4);
+    if (thumb < -0.12) return match('A',0.6);
+    if ([8,12,16,20].every(tip => d(tip,4)<0.55)) return match('E',0.5);
+    if (p[4].z > (p[8].z+p[12].z)/2) {
+      return match(thumb < project(9) ? 'T' : thumb < project(13) ? 'N' : 'M',0.5);
+    }
+    return match('S',0.5);
+  }
+  return null;
+}
+
+export { classifySign as signClassifier };
