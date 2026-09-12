@@ -1,30 +1,45 @@
-// Fake recognizer so B can build game modes before A's real classifier
-// exists. Cycles through a fixed label every couple seconds. Owned by A —
-// replace the internals, keep the SignRecognition shape from contracts.ts.
-import { useEffect, useRef, useState } from "react";
-import type { SignRecognition, SignResult } from "../lib/contracts";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { SignResult } from '../lib/contracts';
+import type { Recognition, RecognitionOptions } from './types';
+import { useRecognitionState } from './useRecognitionState';
 
-const FAKE_LABELS = ["A", "B", "THANK YOU", "1", "5"];
+export const MOCK_SEQUENCE: readonly (SignResult | null)[] = [
+  { label: 'A', confidence: 0.95 }, null,
+  { label: 'B', confidence: 0.95 }, null,
+  { label: 'THANK YOU', confidence: 0.95 }, null,
+  { label: '1', confidence: 0.95 }, null,
+  { label: '5', confidence: 0.95 }, null,
+];
 
-export function useMockSignRecognition(): SignRecognition {
-  const [current, setCurrent] = useState<SignResult | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  function start() {
-    let i = 0;
-    intervalRef.current = setInterval(() => {
-      setCurrent({ label: FAKE_LABELS[i % FAKE_LABELS.length], confidence: 0.9 });
-      i++;
-    }, 2000);
-  }
-
-  function stop() {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = null;
-    setCurrent(null);
-  }
-
-  useEffect(() => stop, []);
-
-  return { current, start, stop };
+/** Drop-in for B: no camera, model download, API key, or backend required. */
+export function useSignRecognition(
+  options: RecognitionOptions & { sequence?: readonly (SignResult | null)[] } = {},
+): Recognition {
+  const { current, confirmed, correctReps, holdProgress, reset, clearHold, accept } = useRecognitionState(options);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const latest = useRef(options);
+  useLayoutEffect(() => { latest.current = options; }, [options]);
+  const [status, setStatus] = useState<Recognition['status']>('idle');
+  const stop = useCallback(() => {
+    if (timer.current !== null) clearInterval(timer.current);
+    timer.current = null; setStatus('idle'); clearHold();
+  }, [clearHold]);
+  const start = useCallback(() => {
+    if (timer.current !== null) return;
+    clearHold(); setStatus('running');
+    const started = performance.now();
+    timer.current = setInterval(() => {
+      const now = performance.now();
+      const sequence = latest.current.sequence ?? MOCK_SEQUENCE;
+      accept(sequence.length ? sequence[Math.floor((now - started) / 1600) % sequence.length] : null, now);
+    }, 50);
+  }, [accept, clearHold]);
+  useEffect(() => () => { if (timer.current !== null) clearInterval(timer.current); }, []);
+  return { current: current, confirmed: confirmed, correctReps: correctReps,
+    holdProgress: holdProgress, reset: reset, videoRef, canvasRef,
+    status, error: null, coachingLine: 'Mock mode — no camera or AI coaching.', start, stop };
 }
+
+export { useSignRecognition as useMockSignRecognition };
