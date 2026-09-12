@@ -76,7 +76,7 @@ export function Lesson() {
         progress={0}
         progressLabel="Ready when you are"
       >
-        <div className="rounded-2xl border border-line bg-surface p-8 text-center sm:p-14">
+        <div className="rounded-2xl border-2 border-line bg-surface p-8 text-center sm:p-14">
           <span aria-hidden="true" className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-soft text-brand">
             <Icon name="hand" size={32} />
           </span>
@@ -85,8 +85,9 @@ export function Lesson() {
             Once you start, we'll speak each prompt aloud and turn on your camera. Find good
             lighting and make sure your whole hand will be in view.
           </p>
-          <Button className="mt-7" onClick={() => setStarted(true)}>
+          <Button className="mt-7 inline-flex items-center gap-2" onClick={() => setStarted(true)}>
             Start practice
+            <Icon name="arrowRight" size={18} />
           </Button>
         </div>
       </GameLayout>
