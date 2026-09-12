@@ -4,6 +4,7 @@
 // round once all five are confirmed.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../components/ui/Button";
+import { Icon } from "../components/ui/Icon";
 import { Caption } from "../voice/Caption";
 import { useVoice } from "../voice/useVoice";
 import { useSignRecognition } from "../recognition/useSignRecognition";
