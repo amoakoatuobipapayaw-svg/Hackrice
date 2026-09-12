@@ -1,0 +1,17 @@
+/* globals.css — the ONE stylesheet for the app (see CLAUDE.md conventions).
+   Everything else is Tailwind utility classes. */
+@import "tailwindcss";
+
+@theme {
+  --font-sans: system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-950 text-slate-100 antialiased;
+}

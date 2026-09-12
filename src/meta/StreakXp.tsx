@@ -1,0 +1,43 @@
+import type { UserProfile } from "../lib/contracts";
+
+const XP_PER_LEVEL = 100;
+
+/** Small streak pill: "🔥 N day streak". */
+export function StreakBadge({ profile }: { profile: UserProfile }) {
+  return (
+    <div className="flex items-center gap-2 rounded-full bg-slate-800 px-4 py-2 text-sm font-semibold">
+      <span aria-hidden="true">🔥</span>
+      <span>
+        {profile.streak} day{profile.streak === 1 ? "" : "s"}
+      </span>
+    </div>
+  );
+}
+
+/** XP progress bar for the current level. */
+export function XpBar({ profile }: { profile: UserProfile }) {
+  const xpIntoLevel = profile.xp % XP_PER_LEVEL;
+  const pct = Math.min(100, (xpIntoLevel / XP_PER_LEVEL) * 100);
+
+  return (
+    <div className="w-full">
+      <div className="mb-1 flex justify-between text-xs text-slate-400">
+        <span>Level {profile.level}</span>
+        <span>
+          {xpIntoLevel} / {XP_PER_LEVEL} XP
+        </span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+        <div
+          className="h-full rounded-full bg-violet-500 transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Given total XP, derive the level (100 XP per level, matches XpBar). */
+export function levelForXp(xp: number): number {
+  return Math.floor(xp / XP_PER_LEVEL) + 1;
+}
