@@ -1,43 +1,40 @@
-// Lesson mode: sign 5 targets in a row. Each correct rep is scored, coached
-// by Gemini, and spoken aloud by ElevenLabs, then the round posts XP/streak
-// to the leaderboard — this is CLAUDE.md's "one demo that has to work."
+// Lesson mode: sign 5 targets in a row. Recognition owns hold-to-confirm and
+// Gemini coaching internally (see src/recognition/README.md); this screen
+// just supplies the target, speaks prompts/results aloud, and scores the
+// round once all five are confirmed.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { Button } from "../components/ui/Button";
 import { Caption } from "../voice/Caption";
 import { useVoice } from "../voice/useVoice";
-import { geminiCoach } from "../recognition/geminiCoach";
 import { useSignRecognition } from "../recognition/useSignRecognition";
-import type { RoundResult, UserProfile } from "../lib/contracts";
+import type { RoundResult, SignResult, UserProfile } from "../lib/contracts";
 import { getLocalProfile } from "../lib/localProfile";
 import { completeRound, LESSON_LENGTH, scoreRound } from "./gameLogic";
+import { RecognitionCamera } from "./RecognitionCamera";
 import { RoundComplete } from "./RoundComplete";
-import { pickSigns } from "./signCatalog";
-import { useHoldToConfirm } from "./useHoldToConfirm";
-import { useRecognitionLifecycle } from "./useRecognitionLifecycle";
-
-const FALLBACK_COACHING = "Nice! Keep your hand steady and try the next one.";
-const ADVANCE_DELAY_MS = 1200;
+import { LETTER_CATALOG, pickSigns } from "./signCatalog";
 
 export function Lesson() {
   const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
-  const targets = useMemo(() => pickSigns(LESSON_LENGTH), []);
+  const targets = useMemo(() => pickSigns(LESSON_LENGTH, LETTER_CATALOG), []);
   const [index, setIndex] = useState(0);
-  const [correct, setCorrect] = useState(0);
-  const [comboStreak, setComboStreak] = useState(0);
-  const [coachingLine, setCoachingLine] = useState<string | null>(null);
   const [result, setResult] = useState<RoundResult | null>(null);
-  const advancedForIndexRef = useRef(-1);
 
-  const recognition = useSignRecognition();
   const voice = useVoice();
   const voiceRef = useRef(voice);
   useEffect(() => {
     voiceRef.current = voice;
   });
-  const target = targets[index] as string | undefined;
-  const confirmed = useHoldToConfirm(recognition.current, target ?? "");
 
-  useRecognitionLifecycle(recognition, true);
+  const target = targets[index] as string | undefined;
+
+  function handleConfirm(confirmedResult: SignResult) {
+    voiceRef.current.speak(confirmedResult.label).catch(() => {});
+    setIndex((i) => i + 1);
+  }
+
+  const recognition = useSignRecognition({ target, vocabulary: "letters", coaching: true, onConfirm: handleConfirm });
 
   useEffect(() => {
     if (!target) return;
@@ -45,26 +42,11 @@ export function Lesson() {
   }, [target]);
 
   useEffect(() => {
-    if (!confirmed || !target || advancedForIndexRef.current === index) return;
-    advancedForIndexRef.current = index;
-
-    setCorrect((c) => c + 1);
-    setComboStreak((c) => c + 1);
-    voiceRef.current.speak(target).catch(() => {});
-    geminiCoach(`Signed ${target} correctly during an ASL lesson.`)
-      .then(setCoachingLine)
-      .catch(() => setCoachingLine(FALLBACK_COACHING));
-
-    const timer = setTimeout(() => setIndex((i) => i + 1), ADVANCE_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [confirmed, index, target]);
-
-  useEffect(() => {
     if (index < LESSON_LENGTH || !profile || result) return;
-    const roundResult = scoreRound("lesson", correct, LESSON_LENGTH);
+    const roundResult = scoreRound("lesson", index, LESSON_LENGTH);
     setResult(roundResult);
     void completeRound(profile, roundResult).then(setProfile);
-  }, [index, profile, result, correct]);
+  }, [index, profile, result]);
 
   if (!profile) {
     return (
@@ -86,12 +68,9 @@ export function Lesson() {
           result={result}
           profile={profile}
           onRetry={() => {
+            recognition.reset();
             setIndex(0);
-            setCorrect(0);
-            setComboStreak(0);
-            setCoachingLine(null);
             setResult(null);
-            advancedForIndexRef.current = -1;
           }}
         />
       </div>
@@ -104,14 +83,34 @@ export function Lesson() {
         Sign {index + 1} of {LESSON_LENGTH}
       </p>
       <h1 className="mt-2 text-4xl font-bold">{target}</h1>
+
+      <div className="mt-4">
+        <RecognitionCamera videoRef={recognition.videoRef} canvasRef={recognition.canvasRef} />
+      </div>
+
+      {recognition.status === "idle" && (
+        <Button className="mt-4" onClick={recognition.start}>
+          Start camera
+        </Button>
+      )}
+      {recognition.status === "loading" && <p className="mt-4 text-slate-400">Starting camera…</p>}
+      {recognition.status === "error" && (
+        <p className="mt-4 text-red-400" role="alert">
+          {recognition.error}
+        </p>
+      )}
+
       <p className="mt-4 text-slate-300">
         Recognized: <span className="font-mono">{recognition.current?.label ?? "—"}</span>
       </p>
-      <p className="mt-1 text-sm text-slate-400">Combo: {comboStreak}</p>
+      <label className="mx-auto mt-2 block max-w-xs text-sm text-slate-400">
+        Hold to confirm
+        <progress className="mt-1 w-full" value={recognition.holdProgress} max={1} />
+      </label>
 
-      {coachingLine && (
+      {recognition.coachingLine && (
         <p className="mt-6 text-violet-300" role="status">
-          {coachingLine}
+          {recognition.coachingLine}
         </p>
       )}
 

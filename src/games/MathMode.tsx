@@ -1,8 +1,10 @@
 // Math mode: solve arithmetic by signing the number or speaking it. Reuses
-// voice/MicButton.tsx + voice/Caption.tsx for the speech path and the same
-// recognition hook as Lesson/SpeedChallenge for the sign path.
+// voice/MicButton.tsx + voice/Caption.tsx for the speech path and
+// recognition/useSignRecognition() (numbers vocabulary) for the sign path;
+// recognition owns hold-to-confirm internally.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { Button } from "../components/ui/Button";
 import { Caption } from "../voice/Caption";
 import { MicButton } from "../voice/MicButton";
 import { useVoice } from "../voice/useVoice";
@@ -11,9 +13,8 @@ import type { RoundResult, UserProfile } from "../lib/contracts";
 import { getLocalProfile } from "../lib/localProfile";
 import { completeRound, MATH_ROUND_LENGTH, scoreRound } from "./gameLogic";
 import { generateMathProblem, parseSpokenNumber } from "./mathProblems";
+import { RecognitionCamera } from "./RecognitionCamera";
 import { RoundComplete } from "./RoundComplete";
-import { useHoldToConfirm } from "./useHoldToConfirm";
-import { useRecognitionLifecycle } from "./useRecognitionLifecycle";
 
 export function MathMode() {
   const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
@@ -24,15 +25,11 @@ export function MathMode() {
   const [result, setResult] = useState<RoundResult | null>(null);
   const advancedForIndexRef = useRef(-1);
 
-  const recognition = useSignRecognition();
   const voice = useVoice();
   const voiceRef = useRef(voice);
   useEffect(() => {
     voiceRef.current = voice;
   });
-  const signConfirmed = useHoldToConfirm(recognition.current, result ? "" : String(problem.answer));
-
-  useRecognitionLifecycle(recognition, true);
 
   useEffect(() => {
     if (result) return;
@@ -54,12 +51,19 @@ export function MathMode() {
     [problemIndex, problem],
   );
 
+  const recognition = useSignRecognition({
+    target: result ? undefined : String(problem.answer),
+    vocabulary: "numbers",
+    onConfirm: () => advance(true),
+  });
+  const recognitionRef = useRef(recognition);
   useEffect(() => {
-    if (signConfirmed) advance(true);
-  }, [signConfirmed, advance]);
+    recognitionRef.current = recognition;
+  });
 
   useEffect(() => {
     if (problemIndex < MATH_ROUND_LENGTH || !profile || result) return;
+    recognitionRef.current.stop();
     const roundResult = scoreRound("math", correct, MATH_ROUND_LENGTH);
     setResult(roundResult);
     void completeRound(profile, roundResult).then(setProfile);
@@ -89,6 +93,7 @@ export function MathMode() {
           result={result}
           profile={profile}
           onRetry={() => {
+            recognition.reset();
             setProblemIndex(0);
             setProblem(generateMathProblem());
             setCorrect(0);
@@ -107,6 +112,22 @@ export function MathMode() {
         Problem {problemIndex + 1} of {MATH_ROUND_LENGTH}
       </p>
       <h1 className="mt-2 text-4xl font-bold">{problem.prompt} = ?</h1>
+
+      <div className="mt-4">
+        <RecognitionCamera videoRef={recognition.videoRef} canvasRef={recognition.canvasRef} />
+      </div>
+
+      {recognition.status === "idle" && (
+        <Button className="mt-4" onClick={recognition.start}>
+          Start camera
+        </Button>
+      )}
+      {recognition.status === "error" && (
+        <p className="mt-4 text-red-400" role="alert">
+          {recognition.error}
+        </p>
+      )}
+
       <p className="mt-4 text-slate-300">
         Sign the number, or tap the mic and say it. Recognized:{" "}
         <span className="font-mono">{recognition.current?.label ?? "—"}</span>

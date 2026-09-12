@@ -1,13 +1,17 @@
-// MVP sign catalog Lesson/Speed Challenge draw prompts from. Kept aligned
-// with recognition/mock.ts's fixed cycle for now so the mocked demo always
-// produces a match — expand once A's real classifier covers the full
-// A-Z/0-9 set from CLAUDE.md's recognition scope.
-export const SIGN_CATALOG = ["A", "B", "THANK YOU", "1", "5"] as const;
+// MVP sign catalogs Lesson/Speed Challenge draw prompts from. Recognition's
+// real classifier (src/recognition/signClassifier.ts) only reliably confirms
+// the letters I, L, V, W, Y and digits 0-9 today — other letters exist but
+// score below the confirmation threshold on purpose, and word signs like
+// "THANK YOU" exist in the mock only (see src/recognition/README.md).
+// CLAUDE.md's golden demo line ("sign THANK YOU") isn't achievable with the
+// real recognizer yet; these catalogs stick to what can actually confirm.
+export const LETTER_CATALOG = ["I", "L", "V", "W", "Y"] as const;
+export const NUMBER_CATALOG = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 
-export function pickSigns(count: number): string[] {
+export function pickSigns(count: number, catalog: readonly string[] = LETTER_CATALOG): string[] {
   const picks: string[] = [];
   for (let i = 0; i < count; i++) {
-    picks.push(SIGN_CATALOG[i % SIGN_CATALOG.length]);
+    picks.push(catalog[i % catalog.length]);
   }
   return picks;
 }
