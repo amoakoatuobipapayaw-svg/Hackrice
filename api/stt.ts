@@ -1,7 +1,14 @@
 // POST { audioBase64: string, mimeType?: string } -> { transcript: string }
 // Proxies ElevenLabs speech-to-text so ELEVENLABS_API_KEY never reaches the
-// browser. Used for Math mode voice answers.
+// browser. Used for Math mode voice answers — always a single spoken digit,
+// so this is biased toward exactly that vocabulary rather than general
+// dictation, to stay accurate through background noise.
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+
+const DIGIT_KEYTERMS = [
+  "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+  "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
@@ -21,6 +28,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // skip language auto-detection.
   form.append("model_id", "scribe_v2");
   form.append("language_code", "en");
+  form.append("temperature", "0");
+  // ElevenLabs wants one "keyterms" field per term, not a JSON-encoded list
+  // (verified against the live API — a JSON string gets treated as a single
+  // 100+ char keyword and rejected for exceeding the 50-char limit).
+  for (const term of DIGIT_KEYTERMS) form.append("keyterms", term);
   form.append("file", new Blob([audioBuffer], { type: mimeType }), "audio");
 
   const elevenRes = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
