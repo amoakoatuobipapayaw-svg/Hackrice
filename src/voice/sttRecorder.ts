@@ -13,11 +13,15 @@ const NOISE_MARGIN = 0.02; // how much louder than ambient counts as "speaking"
 const MIN_SPEECH_THRESHOLD = 0.02; // floor so a silent room doesn't self-trigger
 const SILENCE_HOLD_MS = 500; // quiet time after speech before we call it done
 const MAX_RECORD_MS = 4000; // time to react, start talking, and finish the word
-const VOICE_BAND_LOW_HZ = 300; // human speech's fundamental+formant energy
-const VOICE_BAND_HIGH_HZ = 3400; // mostly lives in this (telephone-band) range
+const VOICE_BAND_LOW_HZ = 300; // vowels/formants live here...
+const VOICE_BAND_HIGH_HZ = 8000; // ...but sibilants ("s" in six/seven, "th" in
+// three) carry real energy up past the old 3400Hz telephone-band cutoff —
+// excluding that range made those specific digits look quieter than
+// vowel-heavy ones ("one", "four") and easy to miss. Widened it; the
+// whistling rejection below doesn't depend on the band being narrow.
 const TONAL_PEAK_RATIO = 6; // a pure tone (whistling) concentrates energy in
-// one or two bins; speech spreads it across the band — discount anything
-// this peaky so whistling doesn't get mistaken for talking
+// one or two bins; speech — including its sibilant hiss — spreads energy
+// across many bins, so this ratio still tells them apart in the wider band
 
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
