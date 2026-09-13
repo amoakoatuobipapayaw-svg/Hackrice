@@ -5,9 +5,8 @@ import { LogoMark } from '../components/ui/Logo';
 import { signOutUser } from '../lib/auth';
 import { getActivityDays } from '../lib/activityLog';
 import type { UserProfile } from '../lib/contracts';
-import { clearLocalProfile, saveLocalProfile } from '../lib/localProfile';
+import { clearLocalProfile } from '../lib/localProfile';
 import { resolveProfile } from '../lib/profile';
-import { syncProfile } from '../lib/supabase';
 import { PersonaGate } from '../meta/PersonaGate';
 import { MIN_STREAK_FOR_BADGE } from '../meta/solanaBadge';
 import { SolanaBadgeCard } from '../meta/SolanaBadgeCard';
@@ -73,13 +72,6 @@ export function Home() {
   if (profile === undefined) return null; // resolving auth session — avoid an onboarding flash
   if (profile === null) return <Navigate to="/onboarding" replace />;
   const currentProfile = profile;
-
-  async function handleVerified() {
-    const updated = { ...currentProfile, verified: true };
-    saveLocalProfile(updated);
-    setProfile(updated);
-    await syncProfile(updated);
-  }
 
   async function handleLogout() {
     await signOutUser();
@@ -157,7 +149,7 @@ export function Home() {
           </p>
           <Link to="/leaderboard" className="mt-4 inline-flex items-center gap-1.5 text-sm font-extrabold text-brand uppercase hover:underline underline-offset-4">View leaderboard<Icon name="arrowRight" size={16} /></Link>
           {profile.email && !profile.verified && import.meta.env.VITE_PERSONA_TEMPLATE_ID && (
-            <div className="mt-5 border-t-2 border-line pt-4"><PersonaGate onVerified={handleVerified} /></div>
+            <div className="mt-5 border-t-2 border-line pt-4"><PersonaGate profile={currentProfile} onVerified={setProfile} /></div>
           )}
           {!profile.email && (
             <Link to="/onboarding" className="mt-5 flex items-center justify-center gap-2 rounded-xl border-2 border-b-4 border-line py-3 text-center text-sm font-extrabold tracking-wide text-brand uppercase hover:bg-soft">Sign in with Google</Link>
