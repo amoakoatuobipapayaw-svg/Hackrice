@@ -1,11 +1,10 @@
 // The unit path shown on Home, styled to match the tone-based Icon list
 // pattern introduced alongside it (see Home.tsx's stats/activity styling).
-// Units come from signCatalog's UNITS list; lock state is derived from the
-// classifier's DEMO_LETTERS / DEMO_NUMBERS, so a unit unlocks itself the
-// moment every sign in it is promoted in src/recognition/signClassifier.ts —
-// nothing here needs to change when that happens.
+// Units come from signCatalog's UNITS list; lock state is sequential —
+// finishing one unit (profile.completedUnits) unlocks the next.
 import { Link } from "react-router-dom";
 import { Icon, type IconName } from "../components/ui/Icon";
+import { getLocalProfile } from "../lib/localProfile";
 import { isUnitUnlocked, UNITS, type Unit } from "./signCatalog";
 import { hasSeenWelcome } from "./welcomeProgress";
 
@@ -24,7 +23,7 @@ const TAG: Record<Tone, string> = {
 
 function unitHref(unit: Unit): string {
   if (unit.kind === "content") return `/${unit.id}`;
-  return unit.vocabulary === "numbers" ? "/math" : `/lesson?unit=${unit.id}`;
+  return unit.vocabulary === "numbers" ? `/math?unit=${unit.id}` : `/lesson?unit=${unit.id}`;
 }
 
 function unitIcon(unit: Unit): IconName {
@@ -33,12 +32,13 @@ function unitIcon(unit: Unit): IconName {
 }
 
 export function Roadmap() {
-  const unlockedCount = UNITS.filter(isUnitUnlocked).length;
+  const profile = getLocalProfile();
+  const unlockedCount = UNITS.filter((unit) => isUnitUnlocked(unit, profile)).length;
   return (
     <>
       <ol className="relative mt-8 space-y-4" aria-label="Course roadmap">
         {UNITS.map((unit, i) => {
-          const unlocked = isUnitUnlocked(unit);
+          const unlocked = isUnitUnlocked(unit, profile);
           const tone = TONES[i % TONES.length];
           const seen = unit.kind === "content" && hasSeenWelcome();
           const tag = seen ? "Read" : unlocked ? `Unit ${i + 1}` : "Coming soon";
@@ -71,7 +71,7 @@ export function Roadmap() {
           );
         })}
       </ol>
-      <p className="mt-4 text-center text-xs text-muted">{unlockedCount} of {UNITS.length} units unlocked. More unlock as recognition covers more signs.</p>
+      <p className="mt-4 text-center text-xs text-muted">{unlockedCount} of {UNITS.length} units unlocked. Finish a unit to unlock the next.</p>
     </>
   );
 }

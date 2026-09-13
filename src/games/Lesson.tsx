@@ -15,7 +15,7 @@ import { completeRound, LESSON_LENGTH, scoreRound } from "./gameLogic";
 import { CameraPanel } from "./CameraPanel";
 import { GameLayout, ProfileGate } from "./GameLayout";
 import { RoundComplete } from "./RoundComplete";
-import { findUnit, isUnitUnlocked, LETTER_CATALOG, pickSigns, speakableLetter } from "./signCatalog";
+import { findUnit, isUnitUnlocked, LETTER_CATALOG, markUnitComplete, pickSigns, speakableLetter } from "./signCatalog";
 
 import { SignGuide } from "./SignGuide";
 
@@ -23,7 +23,8 @@ export function Lesson() {
   const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
   const [searchParams] = useSearchParams();
   const unit = findUnit(searchParams.get("unit"));
-  const unitCatalog = unit && unit.kind !== "content" && unit.vocabulary === "letters" && isUnitUnlocked(unit) ? unit.signs : LETTER_CATALOG;
+  const usingUnit = unit && unit.kind !== "content" && unit.vocabulary === "letters" && isUnitUnlocked(unit, profile);
+  const unitCatalog = usingUnit ? unit.signs : LETTER_CATALOG;
   const [started, setStarted] = useState(false);
   const targets = useMemo(() => pickSigns(LESSON_LENGTH, unitCatalog), [unitCatalog]);
   const [index, setIndex] = useState(0);
@@ -63,8 +64,12 @@ export function Lesson() {
     recognitionRef.current.stop();
     const roundResult = scoreRound("lesson", index, LESSON_LENGTH);
     setResult(roundResult);
-    void completeRound(profile, roundResult).then(setProfile);
-  }, [index, profile, result]);
+    // Mark the unit complete before completeRound, so a signed-in sync
+    // (which fires inside completeRound) carries the new completedUnits
+    // entry too, instead of it waiting for the next round to reach Supabase.
+    const base = usingUnit ? markUnitComplete(profile, unit.id) : profile;
+    void completeRound(base, roundResult).then(setProfile);
+  }, [index, profile, result, usingUnit, unit]);
 
   if (!profile) return <ProfileGate />;
 

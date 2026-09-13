@@ -1,11 +1,14 @@
 // Sign catalogs Lesson/Speed Challenge draw prompts from, plus the unit
 // roadmap (Roadmap.tsx) that groups the full alphabet and 0-9 into a
-// Duolingo-style course. Catalogs and unit lock status are DERIVED from
-// signClassifier's DEMO_LETTERS/DEMO_NUMBERS, not hardcoded here — promoting
-// a sign there (see the CONFIDENCE_CAP table and its comment) is what
-// surfaces it in lessons and unlocks its unit, with no edit needed in this
-// file.
+// Duolingo-style course. Practice catalogs (LETTER_CATALOG/NUMBER_CATALOG)
+// are still DERIVED from signClassifier's DEMO_LETTERS/DEMO_NUMBERS — a
+// sign only appears as a prompt once its recognition is promoted. Unit
+// UNLOCKING, however, is sequential: finishing unit N unlocks unit N+1,
+// tracked in UserProfile.completedUnits (contracts.ts), independent of
+// whether that next unit's own signs happen to be promoted yet.
 import { DEMO_LETTERS, DEMO_NUMBERS } from "../recognition/signClassifier";
+import type { UserProfile } from "../lib/contracts";
+import { hasSeenWelcome } from "./welcomeProgress";
 
 export const LETTER_CATALOG: readonly string[] = DEMO_LETTERS;
 export const NUMBER_CATALOG: readonly string[] = DEMO_NUMBERS;
@@ -44,14 +47,29 @@ export const UNITS: readonly Unit[] = [
   { id: "motion-letters", title: "Motion letters", vocabulary: "letters", signs: ["J", "Z"] },
 ];
 
-function unitCatalog(unit: PracticeUnit): readonly string[] {
-  return unit.vocabulary === "numbers" ? DEMO_NUMBERS : DEMO_LETTERS;
+/** Whether `unit` has been finished — the welcome content unit uses its own
+ * localStorage flag (Welcome.tsx already sets it); every practice unit
+ * checks the profile's completedUnits, written by markUnitComplete below. */
+function isUnitDone(unit: Unit, profile: UserProfile | null): boolean {
+  if (unit.kind === "content") return hasSeenWelcome();
+  return profile?.completedUnits?.includes(unit.id) ?? false;
 }
 
-export function isUnitUnlocked(unit: Unit): boolean {
-  if (unit.kind === "content") return true;
-  const demo = unitCatalog(unit);
-  return unit.signs.every((sign) => demo.includes(sign));
+/** Sequential unlock: the first unit is always open, and each later unit
+ * unlocks once the one immediately before it (in UNITS order) is done —
+ * independent of whether the new unit's own signs are recognition-promoted
+ * yet, so finishing a unit is always what opens the next one. */
+export function isUnitUnlocked(unit: Unit, profile: UserProfile | null = null): boolean {
+  const index = UNITS.findIndex((candidate) => candidate.id === unit.id);
+  if (index <= 0) return true;
+  return isUnitDone(UNITS[index - 1], profile);
+}
+
+/** Call once a unit-scoped round finishes (see Lesson.tsx/MathMode.tsx).
+ * Idempotent — replaying a finished unit doesn't duplicate its entry. */
+export function markUnitComplete(profile: UserProfile, unitId: string): UserProfile {
+  if (profile.completedUnits?.includes(unitId)) return profile;
+  return { ...profile, completedUnits: [...(profile.completedUnits ?? []), unitId] };
 }
 
 export function findUnit(id: string | null | undefined): Unit | undefined {

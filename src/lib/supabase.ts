@@ -86,6 +86,7 @@ export async function syncProfile(profile: UserProfile): Promise<void> {
     xp: profile.xp,
     level: profile.level,
     verified: profile.verified,
+    completed_units: profile.completedUnits ?? [],
   });
   if (error) throw error;
 }
@@ -95,12 +96,14 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, name, email, streak, xp, level, verified")
+    .select("id, name, email, streak, xp, level, verified, completed_units")
     .eq("id", userId)
     .maybeSingle();
 
   if (error) throw error;
-  return data;
+  if (!data) return null;
+  const { completed_units, ...rest } = data;
+  return { ...rest, completedUnits: completed_units ?? [] };
 }
 
 /**

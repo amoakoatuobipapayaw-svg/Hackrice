@@ -3,6 +3,7 @@
 // recognition/useSignRecognition() (numbers vocabulary) for the sign path;
 // recognition owns hold-to-confirm internally.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
 import { Caption } from "../voice/Caption";
@@ -16,9 +17,14 @@ import { generateMathProblem, parseSpokenNumber } from "./mathProblems";
 import { CameraPanel } from "./CameraPanel";
 import { GameLayout, ProfileGate } from "./GameLayout";
 import { RoundComplete } from "./RoundComplete";
+import { findUnit, markUnitComplete } from "./signCatalog";
 
 export function MathMode() {
   const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
+  const [searchParams] = useSearchParams();
+  // Math problems aren't restricted per unit (both numbers-1-9 and zero route
+  // here) — completing any round finishes whichever unit was linked in.
+  const unit = findUnit(searchParams.get("unit"));
   const [started, setStarted] = useState(false);
   const [problemIndex, setProblemIndex] = useState(0);
   const [problem, setProblem] = useState(generateMathProblem);
@@ -70,8 +76,12 @@ export function MathMode() {
     recognitionRef.current.stop();
     const roundResult = scoreRound("math", correct, MATH_ROUND_LENGTH);
     setResult(roundResult);
-    void completeRound(profile, roundResult).then(setProfile);
-  }, [problemIndex, profile, result, correct]);
+    // Mark the unit complete before completeRound, so a signed-in sync
+    // (which fires inside completeRound) carries the new completedUnits
+    // entry too, instead of it waiting for the next round to reach Supabase.
+    const base = unit ? markUnitComplete(profile, unit.id) : profile;
+    void completeRound(base, roundResult).then(setProfile);
+  }, [problemIndex, profile, result, correct, unit]);
 
   function handleVoiceAnswer(transcript: string) {
     const spoken = parseSpokenNumber(transcript);

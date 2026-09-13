@@ -20,9 +20,14 @@ create table if not exists profiles (
   level int not null default 1,
   verified boolean not null default false,
   last_active date,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  completed_units text[] not null default '{}'
 );
 alter table profiles add column if not exists email text;
+-- IDs of games/signCatalog.ts UNITS the learner has finished (see
+-- UserProfile.completedUnits in src/lib/contracts.ts) — drives the
+-- roadmap's sequential unlock for signed-in accounts.
+alter table profiles add column if not exists completed_units text[] not null default '{}';
 
 create table if not exists scores (
   user_id uuid primary key references profiles(id) on delete cascade,
