@@ -69,16 +69,20 @@ export function useSignRecognition(options: RecognitionOptions = {}): Recognitio
         camera.getVideoTracks().forEach(track => { track.onended = () => fail(new Error('Camera disconnected. Press Start to retry.')); });
         await video.play();
         if (!alive()) return;
-        // The motion model is a best-effort upgrade: a slow network or CDN
-        // hiccup must not block the golden demo loop, so its failure is
-        // swallowed here and the geometric heuristic simply takes over.
-        const [detector, mlModel] = await Promise.all([
-          loadHandLandmarker(),
-          loadMotionModel().catch(() => null),
-        ]);
+        // The motion model is a best-effort upgrade loaded in the background,
+        // never awaited here: it pulls a multi-MB TensorFlow.js bundle from a
+        // CDN, and waiting on that before starting the camera would stall or
+        // time out the whole session over something the golden demo loop
+        // doesn't need. Until (or unless) it resolves, motionModel.current
+        // stays null and the geometric heuristic scores J/Z exactly as before.
+        void loadMotionModel().then(loaded => {
+          if (alive()) { motionModel.current = loaded; console.info('[recognition] J/Z model loaded; ML scoring active.'); }
+        }).catch(cause => {
+          console.warn('[recognition] J/Z model failed to load; using the geometric heuristic only.', cause);
+        });
+        const detector = await loadHandLandmarker();
         if (!alive()) { detector.close(); return; }
         model.current = detector;
-        motionModel.current = mlModel;
         if (startupTimer.current) clearTimeout(startupTimer.current);
         startupTimer.current = null; setStatus('running');
         let lastVideoTime = -1, lastInference = -Infinity, lastCoach = -Infinity;
@@ -93,8 +97,9 @@ export function useSignRecognition(options: RecognitionOptions = {}): Recognitio
               let current: SignResult | null = points ? classifySign(points, { vocabulary:settings.vocabulary, aspectRatio }) : null;
               const motionScorer: MotionScorer | undefined = !settings.disableMotionML && motionModel.current
                 ? (samples, candidate) => classifyMotionML(motionModel.current, samples, candidate) : undefined;
-              const motionResult = settings.experimentalMotion && (settings.vocabulary ?? 'letters') === 'letters'
-                ? motion.current.update(points ? computeHandFrame(points, aspectRatio) : null, now, motionScorer) : null;
+              const isMotionMode = settings.experimentalMotion && (settings.vocabulary ?? 'letters') === 'letters';
+              const handFrame = isMotionMode && points ? computeHandFrame(points, aspectRatio) : null;
+              const motionResult = isMotionMode ? motion.current.update(handFrame, now, motionScorer) : null;
               if (motionResult) {
                 current = motionResult;
                 acceptMotion(motionResult);

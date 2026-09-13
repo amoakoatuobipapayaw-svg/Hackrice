@@ -34,31 +34,39 @@ export function classifyMotion(samples: readonly MotionSample[], candidate:strin
   if ((candidate!=='J' && candidate!=='Z') || samples.length<5) return null;
   if (!samples.every(s=>[s.x,s.y,s.t,s.scale].every(Number.isFinite)&&s.scale>0)) return null;
   const duration=samples.at(-1)!.t-samples[0].t;
-  if(duration<200 || duration>3500) return null;
+  if(duration<200 || duration>4500) return null;
   for(let i=1;i<samples.length;i++) if(samples[i].t<=samples[i-1].t || samples[i].t-samples[i-1].t>250) return null;
   const scales=samples.map(s=>s.scale);
   if(Math.max(...scales)/Math.min(...scales)>1.8) return null;
   const p=path(samples), end=p.length-1;
   let quality=0;
+  // Loosened from the original synthetic-fixture-only thresholds: real
+  // camera tracking is jitterier and less directionally clean than a
+  // perfect piecewise-linear test path, so efficiency/distance floors here
+  // are deliberately more forgiving than what first shipped untested.
   for(let a=1;a<end;a++) {
     const first=leg(p,0,a);
     if(candidate==='J') {
       const hook=leg(p,a,end);
       // Descend, then turn sideways and rise. An L-shaped sweep is incomplete.
-      if(first.y<0.45 || Math.abs(first.x)>first.y*0.65 || first.efficiency<0.8) continue;
-      if(Math.abs(hook.x)<0.22 || hook.y> -0.12 || hook.efficiency<0.6) continue;
+      if(first.y<0.22 || Math.abs(first.x)>first.y*1.0 || first.efficiency<0.42) continue;
+      if(Math.abs(hook.x)<0.11 || hook.y> -0.03 || hook.efficiency<0.3) continue;
       quality=Math.max(quality,Math.min(first.efficiency,hook.efficiency));
     } else {
-      if(Math.abs(first.x)<0.35 || Math.abs(first.y)>Math.abs(first.x)*0.35 || first.efficiency<0.8) continue;
+      if(Math.abs(first.x)<0.18 || Math.abs(first.y)>Math.abs(first.x)*0.65 || first.efficiency<0.42) continue;
       for(let b=a+1;b<end;b++) {
         const diagonal=leg(p,a,b),last=leg(p,b,end);
-        if(diagonal.y<0.3 || Math.abs(diagonal.x)<0.3 || diagonal.x*first.x>=0 || diagonal.efficiency<0.78) continue;
-        if(Math.abs(last.x)<0.35 || last.x*first.x<=0 || Math.abs(last.y)>Math.abs(last.x)*0.35 || last.efficiency<0.8) continue;
+        if(diagonal.y<0.14 || Math.abs(diagonal.x)<0.14 || diagonal.x*first.x>=0 || diagonal.efficiency<0.38) continue;
+        if(Math.abs(last.x)<0.18 || last.x*first.x<=0 || Math.abs(last.y)>Math.abs(last.x)*0.65 || last.efficiency<0.42) continue;
         quality=Math.max(quality,Math.min(first.efficiency,diagonal.efficiency,last.efficiency));
       }
     }
   }
-  return quality ? {label:candidate, confidence:Math.min(0.97,0.6+quality*0.37)} : null;
+  // Baseline raised so any pass of the gates above already clears the
+  // default 0.8 hold-to-confirm floor — the gates themselves are now the
+  // real quality filter, so confidence no longer needs to scale as
+  // punishingly with efficiency to avoid confirming a weak match.
+  return quality ? {label:candidate, confidence:Math.min(0.97,0.82+quality*0.15)} : null;
 }
 
 /** An optional trained scorer, tried before the geometric heuristic below.
@@ -90,13 +98,16 @@ export function createMotionTracker() {
       if(++seedCount<3) return null;
       candidate=shape;samples=[];
     }
-    if(!frame || (shape && shape!==candidate) || (missingSince!==null && now-missingSince>400)) {
+    // Grace period widened from 400ms: a brief natural pause or momentary
+    // tracking blur between locking the seed and starting the stroke (or
+    // mid-stroke) shouldn't throw away an otherwise-good attempt.
+    if(!frame || (shape && shape!==candidate) || (missingSince!==null && now-missingSince>900)) {
       candidate=null;samples=[];seedCount=0;return null;
     }
     const tip=frame.p[candidate==='J'?20:8];
     if(!tip || !Number.isFinite(frame.scale) || frame.scale<=0) { reset();return null; }
     const sample={x:tip.x,y:tip.y,t:now,scale:frame.scale};
-    if(samples.length && now-samples[0].t>3500) samples=[];
+    if(samples.length && now-samples[0].t>4500) samples=[];
     // Drop stationary lead-in so waiting to begin doesn't consume the window.
     if(samples.length===1 && Math.hypot(sample.x-samples[0].x,sample.y-samples[0].y)<sample.scale*0.055) samples=[];
     samples.push(sample);
