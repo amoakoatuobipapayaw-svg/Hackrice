@@ -21,7 +21,7 @@ export function AnswerInputs({ voice, onTranscript, onReveal, answering, multiDi
   return (
     <div className="mt-7 space-y-3">
       <div className="flex items-center gap-4 rounded-2xl border-2 border-line bg-canvas p-4">
-        <MicButton listen={voice.listen} isListening={voice.isListening} isTranscribing={voice.isTranscribing} onResult={onTranscript} />
+        <MicButton startListening={voice.startListening} stopListening={voice.stopListening} isListening={voice.isListening} isTranscribing={voice.isTranscribing} onResult={onTranscript} />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-extrabold">Prefer to say it?</p>
           <p className="mt-1 text-xs leading-relaxed text-muted">
