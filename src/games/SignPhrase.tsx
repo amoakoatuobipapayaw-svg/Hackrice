@@ -37,7 +37,7 @@ export function SignPhrase({ text, fill = false }: {
     <div className="flex flex-wrap items-start gap-4" aria-label={`ASL video for "${text}"`}>
       {videos.map((match, i) => (
         <figure key={`${match.word}-${i}`} className={fill ? "min-w-28 max-w-56 flex-1" : "w-36 shrink-0"}>
-          <SignVideoClip src={`/dictionary/${match.file}`} word={match.word} />
+          <SignVideoClip src={`/sign-videos/${match.file}`} word={match.word} />
           <figcaption className="mt-1.5 text-center text-[11px] font-bold tracking-wide text-muted uppercase">{match.word}</figcaption>
         </figure>
       ))}

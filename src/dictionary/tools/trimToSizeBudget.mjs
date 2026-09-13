@@ -11,8 +11,8 @@ import { dirname, join } from 'node:path';
 const BUDGET_BYTES = Number(process.argv[2] ?? 70 * 1024 * 1024);
 const here = dirname(fileURLToPath(import.meta.url));
 const buildIndexPath = join(here, 'buildIndex.mjs');
-const indexPath = join(here, '../../../public/dictionary/index.json');
-const videosDir = join(here, '../../../public/dictionary/videos');
+const indexPath = join(here, '../../../public/sign-videos/index.json');
+const videosDir = join(here, '../../../public/sign-videos/videos');
 
 const source = readFileSync(buildIndexPath, 'utf8');
 const arrayMatch = source.match(/const TARGET_WORDS = \[([\s\S]*?)\n\];/);
@@ -33,7 +33,7 @@ for (const word of priorityOrder) {
 
 const dropped = Object.keys(index).filter((w) => !keep.has(w));
 for (const word of dropped) {
-  const file = join(here, '../../../public/dictionary', index[word].file);
+  const file = join(here, '../../../public/sign-videos', index[word].file);
   try { unlinkSync(file); } catch { /* already gone */ }
   delete index[word];
 }

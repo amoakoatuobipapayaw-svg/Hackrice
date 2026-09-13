@@ -20,7 +20,7 @@ for (const [word, { entries }] of Object.entries(matches)) {
   wanted.set(smallest.fileName, { word, outFile: `${safeName(word)}.mp4` });
 }
 
-const videosDir = join(here, '../../../public/dictionary/videos');
+const videosDir = join(here, '../../../public/sign-videos/videos');
 mkdirSync(videosDir, { recursive: true });
 
 const { zipfile } = await openAslCitizenZip();
@@ -45,7 +45,7 @@ if (found < wanted.size) {
   console.warn(`Warning: only found ${found}/${wanted.size} entries during scan. Missing: ${missing.join(', ')}`);
 }
 
-const indexPath = join(here, '../../../public/dictionary/index.json');
+const indexPath = join(here, '../../../public/sign-videos/index.json');
 writeFileSync(indexPath, JSON.stringify(index, null, 2));
 const totalBytes = Object.values(index).reduce((sum, v) => sum + v.bytes, 0);
 console.log(`\nWrote ${indexPath}`);

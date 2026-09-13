@@ -4,16 +4,22 @@
 // Microsoft's separate sign-off for any future commercial use). The full
 // dataset is 83k+ videos across 2,731 signs in one 42.8 GB zip; extracting
 // just the words below is done offline by src/dictionary/tools/, which
-// commits only the resulting clips (public/dictionary/videos/) and this
-// index (public/dictionary/index.json) — nothing fetches the original zip
+// commits only the resulting clips (public/sign-videos/videos/) and this
+// index (public/sign-videos/index.json) — nothing fetches the original zip
 // at runtime.
+//
+// The static assets live under /sign-videos, not /dictionary, deliberately:
+// the app's /dictionary ROUTE and a same-named /dictionary STATIC directory
+// collided on Vercel — a reload on the /dictionary page served the raw
+// index.json (Vercel resolved the directory to its one file) instead of the
+// SPA's index.html. Keep this name distinct from every route in App.tsx.
 export type DictionaryEntry = { file: string; bytes: number };
 export type DictionaryIndex = Record<string, DictionaryEntry>;
 
 let cached: Promise<DictionaryIndex> | null = null;
 
 export function loadDictionaryIndex(): Promise<DictionaryIndex> {
-  cached ??= fetch('/dictionary/index.json').then((res) => {
+  cached ??= fetch('/sign-videos/index.json').then((res) => {
     if (!res.ok) throw new Error(`Failed to load sign dictionary index: HTTP ${res.status}`);
     return res.json() as Promise<DictionaryIndex>;
   });

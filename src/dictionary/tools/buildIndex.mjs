@@ -17,7 +17,7 @@ import { openAslCitizenZip } from './aslCitizenReader.mjs';
 // sized against Vercel's Hobby-plan 100MB static-file-upload cap, not
 // against how many words ASL Citizen actually has (see
 // trimToSizeBudget.mjs, which cut the list from 365 matched words down to
-// this set to keep public/dictionary/ at ~70MB, a comfortable margin under
+// this set to keep public/sign-videos/ at ~70MB, a comfortable margin under
 // that cap alongside the rest of the app's ~0.5MB of other build output).
 const TARGET_WORDS = [
   'HELLO', 'THANK YOU', 'PLEASE', 'SORRY', 'BYE', 'MORNING',
