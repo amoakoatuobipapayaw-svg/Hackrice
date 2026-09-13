@@ -8,7 +8,14 @@ import { useEffect, useState } from "react";
 import { loadDictionaryIndex, matchPhrase, type PhraseMatch } from "../dictionary";
 import { SignVideoClip } from "./SignVideoClip";
 
-export function SignPhrase({ text }: { text: string }) {
+export function SignPhrase({ text, fill = false }: {
+  text: string;
+  /** Lets clips grow to fill the row instead of sitting at a fixed small
+   * width — Welcome's one-per-card layout otherwise leaves the rest of the
+   * card empty next to a single small clip. Dictionary search results keep
+   * the fixed width, since a long phrase there can return many clips. */
+  fill?: boolean;
+}) {
   const [matches, setMatches] = useState<PhraseMatch[] | null>(null);
   const [error, setError] = useState(false);
 
@@ -29,7 +36,7 @@ export function SignPhrase({ text }: { text: string }) {
   return (
     <div className="flex flex-wrap items-start gap-4" aria-label={`ASL video for "${text}"`}>
       {videos.map((match, i) => (
-        <figure key={`${match.word}-${i}`} className="w-36 shrink-0">
+        <figure key={`${match.word}-${i}`} className={fill ? "min-w-28 max-w-56 flex-1" : "w-36 shrink-0"}>
           <SignVideoClip src={`/dictionary/${match.file}`} word={match.word} />
           <figcaption className="mt-1.5 text-center text-[11px] font-bold tracking-wide text-muted uppercase">{match.word}</figcaption>
         </figure>
