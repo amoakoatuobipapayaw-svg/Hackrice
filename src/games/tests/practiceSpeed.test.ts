@@ -13,8 +13,10 @@ import {
   ALPHABET,
   confirmFloor,
   DIGITS,
+  isUnitUnlocked,
   sampleSigns,
   shuffle,
+  UNITS,
   vocabularyFor,
 } from "../signCatalog";
 import { CONFIDENCE_CAP, CONFIRM_THRESHOLD, DEMO_LETTERS, DEMO_NUMBERS } from "../../recognition/signClassifier";
@@ -185,6 +187,23 @@ test("levels unlock one at a time and never lock themselves again", async () => 
   assert.equal(highestCompletedLevel(), 5);
   store.set("signly:practice:level", "not a number");
   assert.equal(highestCompletedLevel(), 0);
+});
+
+// --- roadmap units -----------------------------------------------------------
+
+test("Roadmap units unlock in strict order, never a later one while an earlier one is locked", () => {
+  let seenLocked = false;
+  for (const unit of UNITS) {
+    const unlocked = isUnitUnlocked(unit);
+    if (!unlocked) seenLocked = true;
+    else assert.ok(!seenLocked, `${unit.id} unlocked after an earlier unit was still locked`);
+  }
+  // Regression: J/Z reaching demo tier (they're both capped at 0.98 — see
+  // signClassifier's CONFIDENCE_CAP) used to let "Motion letters", the very
+  // last unit, unlock while "Fist shapes" (E isn't promoted) stayed locked.
+  assert.ok(isUnitUnlocked(UNITS[2]), "core-five should be unlocked");
+  assert.ok(!isUnitUnlocked(UNITS[3]), "fist-shapes should still be locked");
+  assert.ok(!isUnitUnlocked(UNITS[UNITS.length - 1]), "motion-letters must not unlock ahead of fist-shapes");
 });
 
 // --- speed -----------------------------------------------------------------

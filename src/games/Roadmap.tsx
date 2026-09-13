@@ -1,9 +1,10 @@
 // The unit path shown on Home, styled to match the tone-based Icon list
 // pattern introduced alongside it (see Home.tsx's stats/activity styling).
-// Units come from signCatalog's UNITS list; lock state is derived from the
-// classifier's DEMO_LETTERS / DEMO_NUMBERS, so a unit unlocks itself the
-// moment every sign in it is promoted in src/recognition/signClassifier.ts —
-// nothing here needs to change when that happens.
+// Units come from signCatalog's UNITS list, in course order. isUnitUnlocked
+// is a real sequential progression (see its doc comment in signCatalog.ts):
+// a unit only unlocks once every unit before it does, even if a later unit's
+// signs happen to reach demo tier first — nothing here needs to change when
+// a sign is promoted in src/recognition/signClassifier.ts.
 import { Link } from "react-router-dom";
 import { Icon, type IconName } from "../components/ui/Icon";
 import { isUnitUnlocked, UNITS, type Unit } from "./signCatalog";
@@ -27,9 +28,23 @@ function unitHref(unit: Unit): string {
   return unit.vocabulary === "numbers" ? "/math" : `/lesson?unit=${unit.id}`;
 }
 
+// One icon per unit id, not per kind/vocabulary — several units share a
+// vocabulary (five are "letters"), and reusing one icon for all of them made
+// unrelated units look identical on the roadmap.
+const UNIT_ICON: Record<string, IconName> = {
+  welcome: "bookOpen",
+  "numbers-1-9": "plus",
+  "core-five": "hand",
+  "fist-shapes": "shield",
+  "open-hand": "sun",
+  pointing: "arrowRight",
+  "pinch-curl": "sparkles",
+  zero: "target",
+  "motion-letters": "zap",
+};
+
 function unitIcon(unit: Unit): IconName {
-  if (unit.kind === "content") return "bookOpen";
-  return unit.vocabulary === "numbers" ? "plus" : "hand";
+  return UNIT_ICON[unit.id] ?? (unit.kind === "content" ? "bookOpen" : "hand");
 }
 
 export function Roadmap() {

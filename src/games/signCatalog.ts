@@ -114,10 +114,26 @@ function unitCatalog(unit: PracticeUnit): readonly string[] {
   return unit.vocabulary === "numbers" ? DEMO_NUMBERS : DEMO_LETTERS;
 }
 
-export function isUnitUnlocked(unit: Unit): boolean {
+/** Whether `unit`'s own signs are recognition-ready, ignoring course order. */
+function isUnitReady(unit: Unit): boolean {
   if (unit.kind === "content") return true;
   const demo = unitCatalog(unit);
   return unit.signs.every((sign) => demo.includes(sign));
+}
+
+/**
+ * A real Duolingo-style progression: unit N only unlocks once every unit
+ * before it is unlocked too, even if a later unit's own signs happen to get
+ * promoted first (e.g. J/Z reaching demo tier before the fist-shapes unit
+ * finishes promoting shouldn't let "Motion letters" jump ahead of it). Not
+ * memoized: UNITS is tiny and this only runs while rendering the roadmap.
+ */
+export function isUnitUnlocked(unit: Unit): boolean {
+  const index = UNITS.indexOf(unit);
+  for (let i = 0; i <= index; i++) {
+    if (!isUnitReady(UNITS[i])) return false;
+  }
+  return true;
 }
 
 export function findUnit(id: string | null | undefined): Unit | undefined {
