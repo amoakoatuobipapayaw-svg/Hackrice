@@ -113,3 +113,29 @@ test('shapes that already mean something static are not motion candidates', () =
   const dShape = fakeFrame({ straight: [true, false, false, false], contact: [false, true, false, false] }); // thumb-to-middle -> D, not Z
   assert.equal(motionCandidateShape(dShape), null);
 });
+
+test('nonfinite time/scale, reversed time and tracking gaps abstain', () => {
+  for (const patch of [{t: NaN}, {scale: Infinity}, {t: -1}, {t: 1000}]) {
+    const path = jPath(); path[3] = {...path[3], ...patch};
+    assert.equal(classifyMotion(path, 'J'), null);
+  }
+});
+
+test('Z must progress downward; an upside-down zigzag is rejected', () => {
+  assert.equal(classifyMotion(zPath().map(s => ({...s, y: -s.y})), 'Z'), null);
+});
+
+test('uneven sample density and a brief pause do not change the gesture', () => {
+  for (const [label, original] of [['J', jPath()], ['Z', zPath()]] as const) {
+    const path: MotionSample[] = [];
+    for (let i = 0; i < original.length; i++) {
+      const a = original[i]; path.push({...a, t: path.length * 35});
+      if (i < 3) for (let j = 0; j < 4; j++) path.push({...a, t: path.length * 35});
+    }
+    assert.equal(classifyMotion(path, label)?.label, label);
+  }
+});
+
+test('large depth/scale changes cannot masquerade as a traced sign', () => {
+  assert.equal(classifyMotion(jPath().map((s, i) => ({...s, scale: i < 4 ? 1 : 3})), 'J'), null);
+});

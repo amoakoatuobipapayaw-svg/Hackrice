@@ -13,7 +13,7 @@ import type { SignResult } from '../lib/contracts';
 // `current` (MOTION_LATCH_MS) so the existing hold-to-confirm tracker — built
 // for a held static pose, not a momentary gesture — gets a real ~1s window
 // to see a stable label and confirm it. No change needed in holdTracker.ts.
-const MOTION_WINDOW_MS = 1500;
+const MOTION_WINDOW_MS = 2000;
 const MOTION_LATCH_MS = 1300;
 
 export function useSignRecognition(options: RecognitionOptions = {}): Recognition {
@@ -92,14 +92,25 @@ export function useSignRecognition(options: RecognitionOptions = {}): Recognitio
               let current: SignResult | null = points ? classifySign(points, { vocabulary:settings.vocabulary, aspectRatio }) : null;
               if ((settings.vocabulary ?? 'letters') === 'letters') {
                 const latch = motionLatch.current;
-                if (latch && now < latch.until) {
+                if (latch && points && now < latch.until) {
                   current = latch.result;
                 } else {
+                  if (latch) { motionBuffer.current = []; motionShape.current = null; }
                   motionLatch.current = null;
                   const handFrame = points ? computeHandFrame(points, aspectRatio) : null;
                   const shape = handFrame ? motionCandidateShape(handFrame) : null;
-                  if (shape !== motionShape.current) { motionShape.current = shape; motionBuffer.current = []; }
-                  if (shape && handFrame) {
+                  const lastSample = motionBuffer.current[motionBuffer.current.length - 1];
+                  if (shape && shape !== motionShape.current) {
+                    // A genuinely new gesture candidate (including the first one).
+                    motionShape.current = shape; motionBuffer.current = [];
+                  } else if (!shape && (!lastSample || now - lastSample.t > 250)) {
+                    // Lost the pose for a real stretch, not a single noisy frame — fast
+                    // hand motion causes brief tracking jitter/motion blur on almost every
+                    // frame, so resetting on any single miss meant a gesture could never
+                    // accumulate enough samples to ever be recognized.
+                    motionShape.current = null; motionBuffer.current = [];
+                  }
+                  if (shape && motionShape.current === shape && handFrame) {
                     const tip = shape === 'J' ? handFrame.p[20] : handFrame.p[8];
                     const cutoff = now - MOTION_WINDOW_MS;
                     motionBuffer.current = [...motionBuffer.current.filter(s => s.t >= cutoff),

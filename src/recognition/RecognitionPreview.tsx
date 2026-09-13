@@ -55,7 +55,10 @@ function CameraDemo() {
     <label><input type="checkbox" checked={coaching} onChange={event => setCoaching(event.target.checked)} />
       {' '}Enable AI coaching (sends hand coordinates to the team’s server every five seconds)</label>
     <Readout recognition={recognition} target={target} />
-    <p>Prototype rules, not validated ASL assessment. J/Z and word signs are not supported.
+    <p>For J, start with the I hand shape and trace down into a hook with your little finger.
+      For Z, point your index finger and trace across, diagonally down, then across again.
+      Try each movement within about two seconds, keeping your whole hand in view.</p>
+    <p>Prototype rules, not validated ASL assessment. J/Z motion guesses are experimental; word signs are not supported.
       Other letter guesses are experimental and do not earn reps at the default threshold.</p>
   </>;
 }

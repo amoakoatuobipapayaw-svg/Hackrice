@@ -22,7 +22,7 @@ export type MotionSample = { x: number; y: number; t: number; scale: number };
 
 const MIN_SAMPLES = 5;
 const MIN_DURATION_MS = 200;
-const MAX_DURATION_MS = 1800;
+const MAX_DURATION_MS = 1900;
 
 /** Which motion sign's starting handshape (if any) this frame matches. Reuses
  * the same finger-extension evidence classifySign uses for its own static 'I'
@@ -32,6 +32,29 @@ export function motionCandidateShape(frame: HandFrame): 'J' | 'Z' | null {
   if (!index && !middle && !ring && pinky) return 'J'; // I handshape
   if (index && !middle && !ring && !pinky && !frame.thumbOut && !frame.contact[1]) return 'Z'; // bare index point
   return null;
+}
+
+/** Sample by distance travelled, not frame count: pauses and uneven signing
+ * speeds must not move the apparent corners of a gesture. */
+function resamplePath(samples: readonly MotionSample[]): MotionSample[] {
+  const distances = [0];
+  for (let i = 1; i < samples.length; i++) {
+    distances.push(distances[i - 1] + Math.hypot(samples[i].x - samples[i - 1].x, samples[i].y - samples[i - 1].y));
+  }
+  const total = distances[distances.length - 1];
+  if (total === 0) return [...samples];
+  const result: MotionSample[] = [];
+  let segment = 1;
+  for (let i = 0; i <= 24; i++) {
+    const distance = total * i / 24;
+    while (segment < samples.length - 1 && distances[segment] < distance) segment++;
+    const a = samples[segment - 1], b = samples[segment];
+    const length = distances[segment] - distances[segment - 1];
+    const f = length > 0 ? (distance - distances[segment - 1]) / length : 0;
+    result.push({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f,
+      t: a.t + (b.t - a.t) * f, scale: a.scale + (b.scale - a.scale) * f });
+  }
+  return result;
 }
 
 function normalizedPath(samples: readonly MotionSample[]) {
@@ -82,7 +105,7 @@ function scoreZ(samples: readonly MotionSample[]): number {
   const outerHoriz = Math.min(ramp(Math.abs(horiz[0]), 0.3, 0.85), ramp(Math.abs(horiz[2]), 0.3, 0.85));
   const outerAgree = ramp(horiz[0] * horiz[2], 0.05, 0.4); // outer legs point the same way
   const reversal = ramp(-(horiz[0] * horiz[1]), 0.05, 0.4); // middle leg reverses that direction
-  const vertical = ramp(Math.abs(legs[1].y / legs[1].len), 0.1, 0.7); // and drifts vertically, unlike the outer legs
+  const vertical = ramp(legs[1].y / legs[1].len, 0.1, 0.7); // and drifts vertically, unlike the outer legs
   return Math.min(outerHoriz, outerAgree, reversal, vertical);
 }
 
@@ -93,8 +116,14 @@ export function classifyMotion(samples: readonly MotionSample[], candidate: stri
   if (!scorer || samples.length < MIN_SAMPLES) return null;
   const duration = samples[samples.length - 1].t - samples[0].t;
   if (duration < MIN_DURATION_MS || duration > MAX_DURATION_MS) return null;
-  if (!samples.every(s => Number.isFinite(s.x) && Number.isFinite(s.y) && s.scale > 0)) return null;
-  const evidence = scorer(samples);
+  if (!samples.every(s => [s.x, s.y, s.t, s.scale].every(Number.isFinite) && s.scale > 0)) return null;
+  for (let i = 1; i < samples.length; i++) {
+    const gap = samples[i].t - samples[i - 1].t;
+    if (gap <= 0 || gap > 250) return null;
+  }
+  const scales = samples.map(s => s.scale);
+  if (Math.max(...scales) / Math.min(...scales) > 1.8) return null;
+  const evidence = scorer(resamplePath(samples));
   if (evidence <= 0) return null;
   const cap = CONFIDENCE_CAP[candidate] ?? DEFAULT_CAP;
   return { label: candidate, confidence: Math.min(cap, 0.45 + 0.53 * evidence) };

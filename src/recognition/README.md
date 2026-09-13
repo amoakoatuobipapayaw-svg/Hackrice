@@ -153,3 +153,18 @@ if your terminal says `npm: command not found`, install a current Node LTS runti
 
 References: [MediaPipe web guide](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/web_js),
 [ASL fingerspelling reference](https://www.lifeprint.com/asl101/pages-layout/fingerspelling.htm).
+
+## Motion robustness update
+
+J/Z paths are resampled by distance travelled rather than frame count, so uneven
+signing speed and brief pauses do not shift the apparent stroke boundaries.
+Z requires a downward middle stroke; horizontal mirroring is still supported.
+Nonfinite samples, non-increasing timestamps, gaps over 250 ms, and scale changes
+over 1.8× are rejected. Candidate poses retain the local 250 ms jitter tolerance
+and two-second buffer. The gesture duration limit is 1900 ms. A latched gesture
+is cleared when the hand disappears, and its trajectory is discarded when the
+latch ends so the old motion cannot be reused.
+
+The suite now has 28 tests. J/Z remain capped at 0.5 pending live validation;
+use the recognition lab's experimental targets to inspect predictions. Verify
+both hands, slow/fast traces, ordinary waving, and release/repeat before promotion.
