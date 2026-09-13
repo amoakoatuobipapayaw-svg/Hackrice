@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/ui/Icon';
 
-export function GameLayout({ mode, title, description, progress, progressLabel, children, backTo = '/', backLabel = 'Back to your journey', progressClass = 'bg-brand', headerAside, footnote = 'No timers on your learning. Practice at your own pace.' }: {
-  mode: string; title: string; description: string; progress: number; progressLabel: string; children: ReactNode;
+export function GameLayout({ mode, title, description, progress = 0, progressLabel, children, backTo = '/', backLabel = 'Back to your journey', progressClass = 'bg-brand', headerAside, footnote = 'No timers on your learning. Practice at your own pace.', hero }: {
+  mode?: string; title?: string; description?: string; progress?: number; progressLabel?: string; children: ReactNode;
   /** Where the top-left link goes — a level page returns to its map, not all the way home. */
   backTo?: string; backLabel?: string;
   /** Lets a themed mode (Speed's easy/medium/hard) colour its own progress bar. */
@@ -13,24 +13,32 @@ export function GameLayout({ mode, title, description, progress, progressLabel, 
   /** The closing line. Speed overrides it — a countdown is the one place
    * "no timers on your learning" isn't true. */
   footnote?: ReactNode;
+  /** A fully custom header (e.g. a colored banner) instead of the plain
+   * mode/title/description/progress block — for a content page that isn't
+   * really "in a round" and wants to look distinct, not generic. */
+  hero?: ReactNode;
 }) {
   return <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
     <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
       <Link to={backTo} className="inline-flex items-center gap-1.5 rounded-lg text-sm font-bold text-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-4"><Icon name="arrowLeft" size={16} />{backLabel}</Link>
 
     </div>
-    <header className="mb-7">
-      <p className="inline-flex items-center gap-2 text-xs font-extrabold tracking-widest text-brand uppercase"><span aria-hidden="true" className="h-2 w-2 rounded-full bg-accent" />{mode}</p>
-      <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">{title}</h1>
-      <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">{description}</p>
-      {headerAside}
-      <div className="mt-6 flex items-center gap-4">
-        <div role="progressbar" aria-label={progressLabel} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)} className="h-3 flex-1 overflow-hidden rounded-full bg-soft">
-          <div className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${progressClass}`} style={{ width: `${Math.min(100, Math.max(0, progress * 100))}%` }} />
-        </div>
-        <span className="text-sm font-extrabold text-muted">{progressLabel}</span>
-      </div>
-    </header>
+    {hero ?? (title && (
+      <header className="mb-7">
+        {mode && <p className="inline-flex items-center gap-2 text-xs font-extrabold tracking-widest text-brand uppercase"><span aria-hidden="true" className="h-2 w-2 rounded-full bg-accent" />{mode}</p>}
+        <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">{title}</h1>
+        {description && <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">{description}</p>}
+        {headerAside}
+        {progressLabel && (
+          <div className="mt-6 flex items-center gap-4">
+            <div role="progressbar" aria-label={progressLabel} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)} className="h-3 flex-1 overflow-hidden rounded-full bg-soft">
+              <div className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${progressClass}`} style={{ width: `${Math.min(100, Math.max(0, progress * 100))}%` }} />
+            </div>
+            <span className="text-sm font-extrabold text-muted">{progressLabel}</span>
+          </div>
+        )}
+      </header>
+    ))}
     {children}
     <p className="mt-7 text-center text-xs leading-relaxed text-muted">{footnote}</p>
   </div>;

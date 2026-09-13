@@ -8,11 +8,18 @@
 // index (public/sign-videos/index.json) — nothing fetches the original zip
 // at runtime.
 //
-// The static assets live under /sign-videos, not /dictionary, deliberately:
-// the app's /dictionary ROUTE and a same-named /dictionary STATIC directory
-// collided on Vercel — a reload on the /dictionary page served the raw
-// index.json (Vercel resolved the directory to its one file) instead of the
-// SPA's index.html. Keep this name distinct from every route in App.tsx.
+// The index (public/sign-videos/index.json) still lives under /sign-videos,
+// not /dictionary, deliberately: the app's /dictionary ROUTE and a same-named
+// /dictionary STATIC directory collided on Vercel — a reload on the
+// /dictionary page served the raw index.json (Vercel resolved the directory
+// to its one file) instead of the SPA's index.html. Keep this name distinct
+// from every route in App.tsx.
+//
+// The clips themselves are no longer committed to git — they're public
+// objects in a Supabase Storage bucket named "dictionary" (uploaded via the
+// service-role key, no anon write policy). videoUrl() below is the one place
+// that builds their URL; a clip's `file` value (e.g. "videos/me.mp4") is the
+// object's path inside that bucket.
 export type DictionaryEntry = { file: string; bytes: number };
 export type DictionaryIndex = Record<string, DictionaryEntry>;
 
@@ -24,6 +31,12 @@ export function loadDictionaryIndex(): Promise<DictionaryIndex> {
     return res.json() as Promise<DictionaryIndex>;
   });
   return cached;
+}
+
+/** Public URL for a clip's Supabase Storage object. */
+export function videoUrl(file: string): string {
+  const base = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  return `${base}/storage/v1/object/public/dictionary/${file}`;
 }
 
 export type MatchedWord = { type: 'video'; word: string; file: string };
