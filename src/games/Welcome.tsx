@@ -30,7 +30,6 @@ export function Welcome() {
       title="Intro to ASL."
       description="A quick preview of a few everyday signs before you start the alphabet."
       progress={0}
-      progressLabel="A short read, no camera needed"
     >
       <section aria-labelledby="everyday-signs-heading">
         <h2 id="everyday-signs-heading" className="text-lg font-extrabold">Your first everyday signs</h2>

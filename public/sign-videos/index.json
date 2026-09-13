@@ -1166,5 +1166,25 @@
   "HELP": {
     "file": "videos/help.mp4",
     "bytes": 323871
+  },
+  "DROWN 4": {
+    "file": "videos/drown-4.mp4",
+    "bytes": 229449
+  },
+  "EGG BEATER": {
+    "file": "videos/egg-beater.mp4",
+    "bytes": 306661
+  },
+  "SUCK": {
+    "file": "videos/suck.mp4",
+    "bytes": 186448
+  },
+  "SEAL": {
+    "file": "videos/seal.mp4",
+    "bytes": 245532
+  },
+  "EAGLE 2": {
+    "file": "videos/eagle-2.mp4",
+    "bytes": 190280
   }
 }

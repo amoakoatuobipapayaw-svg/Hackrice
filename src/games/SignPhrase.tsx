@@ -3,9 +3,9 @@
 // isolated signs, not every English function word, and a phrase like
 // "my name is" is never going to have a clip for "is". Shared by
 // Welcome.tsx's everyday-signs preview and SignLookup.tsx's search results,
-// both backed by the same curated ASL Citizen subset (src/dictionary/index.ts).
+// both backed by the same ASL Citizen dataset (src/dictionary/index.ts).
 import { useEffect, useState } from "react";
-import { loadDictionaryIndex, matchPhrase, type PhraseMatch } from "../dictionary";
+import { loadDictionaryIndex, matchPhrase, videoUrl, type PhraseMatch } from "../dictionary";
 import { SignVideoClip } from "./SignVideoClip";
 
 export function SignPhrase({ text, fill = false }: {
@@ -37,7 +37,7 @@ export function SignPhrase({ text, fill = false }: {
     <div className="flex flex-wrap items-start gap-4" aria-label={`ASL video for "${text}"`}>
       {videos.map((match, i) => (
         <figure key={`${match.word}-${i}`} className={fill ? "min-w-28 max-w-56 flex-1" : "w-36 shrink-0"}>
-          <SignVideoClip src={`/sign-videos/${match.file}`} word={match.word} />
+          <SignVideoClip src={videoUrl(match.file)} word={match.word} />
           <figcaption className="mt-1.5 text-center text-[11px] font-bold tracking-wide text-muted uppercase">{match.word}</figcaption>
         </figure>
       ))}

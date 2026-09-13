@@ -56,7 +56,7 @@ export function Roadmap() {
           const unlocked = isUnitUnlocked(unit);
           const tone = TONES[i % TONES.length];
           const seen = unit.kind === "content" && hasSeenWelcome();
-          const tag = seen ? "Read" : unlocked ? `Unit ${i + 1}` : "Coming soon";
+          const tag = seen ? "Read" : unlocked ? `Unit ${i + 1}` : "Locked";
           const detail = unit.signs.join(" · ");
           return (
             <li key={unit.id} className="relative flex gap-5">
@@ -74,7 +74,7 @@ export function Roadmap() {
                   <Icon name="arrowRight" size={22} className="text-muted transition-transform group-hover:translate-x-1 group-hover:text-brand motion-reduce:transition-none" />
                 </Link>
               ) : (
-                <div aria-label={`${unit.title}: ${detail}, coming soon`} className="flex min-w-0 flex-1 items-center gap-4 rounded-2xl border-2 border-line bg-soft p-5 opacity-70">
+                <div aria-label={`${unit.title}: ${detail}, locked`} className="flex min-w-0 flex-1 items-center gap-4 rounded-2xl border-2 border-line bg-soft p-5 opacity-70">
                   <span className="min-w-0">
                     <span className="inline-block rounded-md bg-surface px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-muted uppercase">{tag}</span>
                     <span className="mt-2 block text-lg font-extrabold text-muted">{unit.title}</span>

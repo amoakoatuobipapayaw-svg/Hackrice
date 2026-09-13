@@ -1,20 +1,33 @@
-// A small "how do you sign this" video lookup backed by a curated subset of
-// the Microsoft ASL Citizen dataset (github.com/microsoft/ASL-citizen-code;
-// non-commercial research license — fine for this demo, would need
-// Microsoft's separate sign-off for any future commercial use). The full
-// dataset is 83k+ videos across 2,731 signs in one 42.8 GB zip; extracting
-// just the words below is done offline by src/dictionary/tools/, which
-// commits only the resulting clips (public/sign-videos/videos/) and this
-// index (public/sign-videos/index.json) — nothing fetches the original zip
-// at runtime.
+// A "how do you sign this" video lookup backed by the Microsoft ASL Citizen
+// dataset (github.com/microsoft/ASL-citizen-code; non-commercial research
+// license — fine for this demo, would need Microsoft's separate sign-off
+// for any future commercial use): 83k+ videos across ~2,675 signs in one
+// 42.8 GB zip. Extraction is done offline by src/dictionary/tools/ — nothing
+// fetches the original zip at runtime.
 //
-// The static assets live under /sign-videos, not /dictionary, deliberately:
+// The actual video BYTES live in Supabase Storage (the "dictionary" public
+// bucket), not in this repo: the full vocabulary is ~600-700MB, which would
+// blow Vercel's Hobby-plan 100MB static-file-upload cap if bundled into the
+// build. Only this small index.json (public/sign-videos/index.json — word
+// -> { file, bytes }) is a committed static asset; video URLs are built
+// from it at runtime via videoUrl() below.
+//
+// The static index lives under /sign-videos, not /dictionary, deliberately:
 // the app's /dictionary ROUTE and a same-named /dictionary STATIC directory
 // collided on Vercel — a reload on the /dictionary page served the raw
 // index.json (Vercel resolved the directory to its one file) instead of the
 // SPA's index.html. Keep this name distinct from every route in App.tsx.
 export type DictionaryEntry = { file: string; bytes: number };
 export type DictionaryIndex = Record<string, DictionaryEntry>;
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const DICTIONARY_BUCKET = 'dictionary';
+
+/** Builds a dictionary video's public Supabase Storage URL from its index.json `file` path. */
+export function videoUrl(file: string): string {
+  if (!SUPABASE_URL) throw new Error('VITE_SUPABASE_URL not set — dictionary videos are hosted on Supabase Storage');
+  return `${SUPABASE_URL}/storage/v1/object/public/${DICTIONARY_BUCKET}/${file}`;
+}
 
 let cached: Promise<DictionaryIndex> | null = null;
 
