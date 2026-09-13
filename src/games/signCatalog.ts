@@ -76,6 +76,21 @@ export function findUnit(id: string | null | undefined): Unit | undefined {
   return UNITS.find((unit) => unit.id === id);
 }
 
+/** Where a unit's card links to — shared by Roadmap.tsx and RoundComplete's
+ * "next unit" continue button, so both agree on the route shape. */
+export function unitHref(unit: Unit): string {
+  if (unit.kind === "content") return `/${unit.id}`;
+  return unit.vocabulary === "numbers" ? `/math?unit=${unit.id}` : `/lesson?unit=${unit.id}`;
+}
+
+/** The unit immediately after `unit` in the roadmap, if any — used to offer
+ * a direct "continue" path off the round-complete screen instead of making
+ * the learner find their way back to the roadmap and pick it themselves. */
+export function nextUnit(unit: Unit): Unit | undefined {
+  const index = UNITS.findIndex((candidate) => candidate.id === unit.id);
+  return index === -1 ? undefined : UNITS[index + 1];
+}
+
 // ElevenLabs' TTS mispronounces a bare "V" (comes out closer to "vye" than
 // "vee", audibly close to "phi") — verified via a TTS->STT round trip, where
 // it also scored a much lower confidence than the other catalog letters.

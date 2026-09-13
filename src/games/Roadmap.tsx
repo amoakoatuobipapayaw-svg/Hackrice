@@ -5,7 +5,7 @@
 import { Link } from "react-router-dom";
 import { Icon, type IconName } from "../components/ui/Icon";
 import { getLocalProfile } from "../lib/localProfile";
-import { isUnitUnlocked, UNITS, type Unit } from "./signCatalog";
+import { isUnitUnlocked, unitHref, UNITS, type Unit } from "./signCatalog";
 import { hasSeenWelcome } from "./welcomeProgress";
 
 type Tone = "brand" | "accent" | "success";
@@ -20,11 +20,6 @@ const TAG: Record<Tone, string> = {
   accent: "bg-accent/30 text-accent-ink",
   success: "bg-success-soft text-success",
 };
-
-function unitHref(unit: Unit): string {
-  if (unit.kind === "content") return `/${unit.id}`;
-  return unit.vocabulary === "numbers" ? `/math?unit=${unit.id}` : `/lesson?unit=${unit.id}`;
-}
 
 function unitIcon(unit: Unit): IconName {
   if (unit.kind === "content") return "bookOpen";
@@ -41,8 +36,8 @@ export function Roadmap() {
           const unlocked = isUnitUnlocked(unit, profile);
           const tone = TONES[i % TONES.length];
           const seen = unit.kind === "content" && hasSeenWelcome();
-          const tag = seen ? "Read" : unlocked ? `Unit ${i + 1}` : "Coming soon";
-          const detail = unit.signs.join(" · ");
+          const tag = seen ? "Read" : unlocked ? `Unit ${i + 1}` : "Locked";
+          const detail = unlocked ? unit.signs.join(" · ") : `Finish "${UNITS[i - 1].title}" to unlock`;
           return (
             <li key={unit.id} className="relative flex gap-5">
               {i < UNITS.length - 1 && <span aria-hidden="true" className="absolute top-14 -bottom-4 left-[26px] w-1 rounded-full border-l-4 border-dotted border-line" />}
@@ -59,7 +54,7 @@ export function Roadmap() {
                   <Icon name="arrowRight" size={22} className="text-muted transition-transform group-hover:translate-x-1 group-hover:text-brand motion-reduce:transition-none" />
                 </Link>
               ) : (
-                <div aria-label={`${unit.title}: ${detail}, coming soon`} className="flex min-w-0 flex-1 items-center gap-4 rounded-2xl border-2 border-line bg-soft p-5 opacity-70">
+                <div aria-label={`${unit.title}: locked. ${detail}`} className="flex min-w-0 flex-1 items-center gap-4 rounded-2xl border-2 border-line bg-soft p-5 opacity-70">
                   <span className="min-w-0">
                     <span className="inline-block rounded-md bg-surface px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-muted uppercase">{tag}</span>
                     <span className="mt-2 block text-lg font-extrabold text-muted">{unit.title}</span>

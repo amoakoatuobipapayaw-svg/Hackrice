@@ -17,7 +17,7 @@ import { generateMathProblem, parseSpokenNumber } from "./mathProblems";
 import { CameraPanel } from "./CameraPanel";
 import { GameLayout, ProfileGate } from "./GameLayout";
 import { RoundComplete } from "./RoundComplete";
-import { findUnit, markUnitComplete } from "./signCatalog";
+import { findUnit, isUnitUnlocked, markUnitComplete, nextUnit, type Unit } from "./signCatalog";
 
 export function MathMode() {
   const [profile, setProfile] = useState<UserProfile | null>(() => getLocalProfile());
@@ -31,6 +31,7 @@ export function MathMode() {
   const [correct, setCorrect] = useState(0);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [result, setResult] = useState<RoundResult | null>(null);
+  const [unlockedNext, setUnlockedNext] = useState<Unit | undefined>();
   const advancedForIndexRef = useRef(-1);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (advanceTimer.current) clearTimeout(advanceTimer.current); }, []);
@@ -80,7 +81,11 @@ export function MathMode() {
     // (which fires inside completeRound) carries the new completedUnits
     // entry too, instead of it waiting for the next round to reach Supabase.
     const base = unit ? markUnitComplete(profile, unit.id) : profile;
-    void completeRound(base, roundResult).then(setProfile);
+    void completeRound(base, roundResult).then((updated) => {
+      setProfile(updated);
+      const upcoming = unit ? nextUnit(unit) : undefined;
+      if (upcoming && isUnitUnlocked(upcoming, updated)) setUnlockedNext(upcoming);
+    });
   }, [problemIndex, profile, result, correct, unit]);
 
   function handleVoiceAnswer(transcript: string) {
@@ -132,6 +137,7 @@ export function MathMode() {
         <RoundComplete
           result={result}
           profile={profile}
+          nextUnit={unlockedNext}
           onRetry={() => {
             recognition.reset();
             setStarted(false);
@@ -140,6 +146,7 @@ export function MathMode() {
             setCorrect(0);
             setFeedback(null);
             setResult(null);
+            setUnlockedNext(undefined);
             advancedForIndexRef.current = -1;
           }}
         />

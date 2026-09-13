@@ -15,7 +15,7 @@ import { completeRound, LESSON_LENGTH, scoreRound } from "./gameLogic";
 import { CameraPanel } from "./CameraPanel";
 import { GameLayout, ProfileGate } from "./GameLayout";
 import { RoundComplete } from "./RoundComplete";
-import { findUnit, isUnitUnlocked, LETTER_CATALOG, markUnitComplete, pickSigns, speakableLetter } from "./signCatalog";
+import { findUnit, isUnitUnlocked, LETTER_CATALOG, markUnitComplete, nextUnit, pickSigns, speakableLetter, type Unit } from "./signCatalog";
 
 import { SignGuide } from "./SignGuide";
 
@@ -29,6 +29,7 @@ export function Lesson() {
   const targets = useMemo(() => pickSigns(LESSON_LENGTH, unitCatalog), [unitCatalog]);
   const [index, setIndex] = useState(0);
   const [result, setResult] = useState<RoundResult | null>(null);
+  const [unlockedNext, setUnlockedNext] = useState<Unit | undefined>();
 
   const voice = useVoice();
   const voiceRef = useRef(voice);
@@ -68,7 +69,11 @@ export function Lesson() {
     // (which fires inside completeRound) carries the new completedUnits
     // entry too, instead of it waiting for the next round to reach Supabase.
     const base = usingUnit ? markUnitComplete(profile, unit.id) : profile;
-    void completeRound(base, roundResult).then(setProfile);
+    void completeRound(base, roundResult).then((updated) => {
+      setProfile(updated);
+      const upcoming = usingUnit ? nextUnit(unit) : undefined;
+      if (upcoming && isUnitUnlocked(upcoming, updated)) setUnlockedNext(upcoming);
+    });
   }, [index, profile, result, usingUnit, unit]);
 
   if (!profile) return <ProfileGate />;
@@ -106,11 +111,13 @@ export function Lesson() {
         <RoundComplete
           result={result}
           profile={profile}
+          nextUnit={unlockedNext}
           onRetry={() => {
             recognition.reset();
             setStarted(false);
             setIndex(0);
             setResult(null);
+            setUnlockedNext(undefined);
           }}
         />
       </div>
