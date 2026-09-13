@@ -9,33 +9,66 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { openAslCitizenZip } from './aslCitizenReader.mjs';
 
-// Common greeting/introduction vocabulary — covers the existing Welcome
-// unit's "HELLO", "THANK YOU", "PLEASE", "SORRY", "MY NAME IS",
-// "NICE TO MEET YOU" once tokenized, plus a few extra common words to make
-// free-text phrase lookup less sparse. Real hits/misses reported below —
-// nothing here is assumed to exist in the dataset.
+// Broad general vocabulary (greetings, family, food, animals, emotions,
+// common verbs/adjectives, places, time, colors, ...), in priority order —
+// earlier entries are kept first if the list ever needs trimming again.
+// Real hits/misses reported below; nothing here is assumed to exist in the
+// dataset. This is NOT the dataset's full ~2,675-word vocabulary: it's
+// sized against Vercel's Hobby-plan 100MB static-file-upload cap, not
+// against how many words ASL Citizen actually has (see
+// trimToSizeBudget.mjs, which cut the list from 365 matched words down to
+// this set to keep public/dictionary/ at ~70MB, a comfortable margin under
+// that cap alongside the rest of the app's ~0.5MB of other build output).
 const TARGET_WORDS = [
-  // Greetings / introductions
-  'HELLO', 'THANK YOU', 'PLEASE', 'SORRY', 'BYE', 'MORNING', 'NIGHT',
-  'MY', 'NAME', 'NICE', 'MEET', 'YOU', 'ME', 'WE', 'THEY', 'HE', 'IT',
-  'FRIEND', 'FAMILY', 'MOTHER', 'FATHER', 'BROTHER', 'SISTER', 'CHILD', 'MAN', 'WOMAN',
-  // Yes/no, feelings, common adjectives
-  'YES', 'NO', 'GOOD', 'BAD', 'FINE', 'HAPPY', 'SAD', 'TIRED', 'SICK', 'HUNGRY',
-  'BIG', 'SMALL', 'HOT', 'COLD', 'NEW', 'OLD', 'FAST', 'SLOW', 'EASY', 'HARD',
-  'MORE', 'SAME', 'DIFFERENT', 'RIGHT', 'WRONG',
-  // Question words
-  'WHAT', 'HOW', 'WHERE', 'WHO', 'WHY', 'WHEN', 'WHICH',
-  // Common verbs
-  'HELP', 'WANT', 'LIKE', 'LOVE', 'NEED', 'HAVE', 'GO', 'COME', 'STOP', 'WAIT',
-  'SEE', 'WATCH', 'LISTEN', 'TALK', 'ASK', 'ANSWER',
-  'UNDERSTAND', 'KNOW', 'LEARN', 'TEACH', 'READ', 'WRITE', 'REMEMBER',
-  'THINK', 'FEEL', 'WORK', 'PLAY', 'EAT', 'DRINK', 'SLEEP', 'MAKE', 'GET', 'GIVE', 'TAKE',
-  'CAN', 'WILL', 'TRY', 'START', 'FINISH',
-  // Everyday nouns / places / time
-  'SIGN', 'DEAF', 'HEARING', 'HOME', 'SCHOOL', 'DAY', 'WEEK', 'YEAR',
-  'TODAY', 'TOMORROW', 'YESTERDAY', 'NOW', 'LATER', 'TIME', 'WATER', 'MONEY',
-  // Colors
-  'RED', 'BLUE', 'GREEN', 'YELLOW', 'BLACK', 'WHITE', 'ORANGE', 'PURPLE', 'BROWN',
+  'HELLO', 'THANK YOU', 'PLEASE', 'SORRY', 'BYE', 'MORNING',
+  'NIGHT', 'MY', 'NAME', 'NICE', 'MEET', 'YOU',
+  'ME', 'WE', 'THEY', 'HE', 'IT', 'FRIEND',
+  'FAMILY', 'MOTHER', 'FATHER', 'BROTHER', 'SISTER', 'CHILD',
+  'MAN', 'WOMAN', 'YES', 'NO', 'GOOD', 'BAD',
+  'FINE', 'HAPPY', 'SAD', 'TIRED', 'SICK', 'HUNGRY',
+  'BIG', 'SMALL', 'HOT', 'COLD', 'NEW', 'OLD',
+  'FAST', 'SLOW', 'EASY', 'HARD', 'MORE', 'SAME',
+  'DIFFERENT', 'RIGHT', 'WRONG', 'WHAT', 'HOW', 'WHERE',
+  'WHO', 'WHY', 'WHEN', 'WHICH', 'HELP', 'WANT',
+  'LIKE', 'LOVE', 'NEED', 'HAVE', 'GO', 'COME',
+  'STOP', 'WAIT', 'SEE', 'WATCH', 'LISTEN', 'TALK',
+  'ASK', 'ANSWER', 'UNDERSTAND', 'KNOW', 'LEARN', 'TEACH',
+  'READ', 'WRITE', 'REMEMBER', 'THINK', 'FEEL', 'WORK',
+  'PLAY', 'EAT', 'DRINK', 'SLEEP', 'MAKE', 'GET',
+  'GIVE', 'TAKE', 'CAN', 'WILL', 'TRY', 'START',
+  'FINISH', 'SIGN', 'DEAF', 'HEARING', 'HOME', 'SCHOOL',
+  'DAY', 'WEEK', 'YEAR', 'TODAY', 'TOMORROW', 'YESTERDAY',
+  'NOW', 'LATER', 'TIME', 'WATER', 'MONEY', 'RED',
+  'BLUE', 'GREEN', 'YELLOW', 'BLACK', 'WHITE', 'ORANGE',
+  'PURPLE', 'BROWN', 'BABY', 'BOY', 'GIRL', 'PEOPLE',
+  'ADULT', 'TEACHER', 'STUDENT', 'DOCTOR', 'NURSE', 'GRANDMOTHER',
+  'GRANDFATHER', 'AUNT', 'UNCLE', 'COUSIN', 'HUSBAND', 'WIFE',
+  'BREAD', 'MILK', 'COFFEE', 'TEA', 'APPLE', 'MEAT',
+  'EGG', 'CHEESE', 'CAKE', 'PIZZA', 'FRUIT', 'VEGETABLE',
+  'BREAKFAST', 'LUNCH', 'DINNER', 'COOK', 'THIRSTY', 'SALT',
+  'DOG', 'CAT', 'BIRD', 'FISH', 'HORSE', 'COW',
+  'PIG', 'BEAR', 'RABBIT', 'SNAKE', 'RAIN', 'SNOW',
+  'WIND', 'TREE', 'FLOWER', 'MOUNTAIN', 'STAR', 'MOON',
+  'FIRE', 'EARTH', 'OCEAN', 'HEAD', 'EAR', 'NOSE',
+  'MOUTH', 'ARM', 'HAIR', 'FACE', 'HEART', 'SHIRT',
+  'PANTS', 'SHOES', 'HAT', 'DRESS', 'HOSPITAL', 'CHURCH',
+  'PARK', 'CITY', 'COUNTRY', 'STREET', 'ROOM', 'KITCHEN',
+  'BATHROOM', 'OFFICE', 'RESTAURANT', 'LIBRARY', 'PHONE', 'COMPUTER',
+  'INTERNET', 'CAR', 'TRAIN', 'BUS', 'AIRPLANE', 'BICYCLE',
+  'DRIVE', 'ANGRY', 'SCARED', 'EXCITED', 'BORED', 'CONFUSED',
+  'CALM', 'LONELY', 'BUY', 'SELL', 'PAY', 'CLEAN',
+  'WASH', 'OPEN', 'CLOSE', 'PUSH', 'PULL', 'CARRY',
+  'WALK', 'RUN', 'JUMP', 'SIT', 'STAND', 'FALL',
+  'CATCH', 'THROW', 'FIGHT', 'CHANGE', 'GROW', 'BREAK',
+  'FIX', 'SHOW', 'HIDE', 'FOLLOW', 'VISIT', 'CALL',
+  'SEND', 'SHARE', 'KEEP', 'LOSE', 'FIND', 'DECIDE',
+  'PLAN', 'PRACTICE', 'CONTINUE', 'ARRIVE', 'LEAVE', 'MOVE',
+  'TRAVEL', 'FLY', 'SWIM', 'DANCE', 'SING', 'PAINT',
+  'CUT', 'COUNT', 'MEASURE', 'MIX', 'BAKE', 'BORROW',
+  'LEND', 'PROMISE', 'TALL', 'HEAVY', 'LIGHT', 'FULL',
+  'EMPTY', 'DIRTY', 'WET', 'DRY', 'LOUD', 'QUIET',
+  'STRONG', 'WEAK', 'RICH', 'POOR', 'YOUNG', 'UGLY',
+  'FUNNY', 'SERIOUS', 'IMPORTANT', 'SAFE',
 ];
 
 /** Some glosses only exist as numbered dialect/homonym variants (e.g. no
