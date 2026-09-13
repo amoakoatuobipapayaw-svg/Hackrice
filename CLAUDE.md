@@ -1,14 +1,12 @@
 # CLAUDE.md — Signly
 
 > Read this fully before writing any code. Four people are building this repo, each driving Claude Code from a separate account. This file is the shared brain that keeps all of us consistent. If you are about to do something this file does not cover, check PLAN.md, then ask in the team chat before inventing a new pattern.
->
-> **Naming note (2026-09-12):** the product was renamed from "SignQuest" to "Signly". Use `src/lib/constants.ts`'s `NAME` export in code rather than hardcoding either string — that's exactly what it's for.
 
 ## What we are building (one sentence)
 Signly is a Duolingo-style web game that teaches American Sign Language: you sign to your webcam, the app scores your hand shape and coaches you, and it can speak your signs out loud, all wrapped in streaks, XP, and a bot-free leaderboard.
 
 ## Status
-Phase 0 scaffolding (D) is done and on `main`: `contracts.ts`, the Vite/React/TS/Tailwind app shell with routing, `src/lib/supabase.ts`, the `/api` proxies, and real-but-stub files + mocks in `recognition/`, `games/`, `voice/`, `meta/`. `npm run dev` and `npm run build` both work with zero env vars set (fall back to mocks). The **Supabase database is live** — one shared project provisioned through Vercel, schema in `supabase/schema.sql`. Ask whoever holds the Vercel project (`vercel env pull .env.local`, or copy `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` from them) so everyone's app points at the same leaderboard. **The app is deployed:** https://signquest-flame.vercel.app — URL still says "signquest" since renaming the Vercel project is a separate decision (would change the URL) — (redeploy manually with `vercel deploy --prod` until Git auto-deploy is sorted — see PLAN.md). Recognition (A) and voice (C) are merged into `main`; B's game integration is next. Pull `main` and see the recognition handoff below and PLAN.md for what's next.
+**Live at https://signly.vip** (also aliased at https://signquest-flame.vercel.app — the underlying Vercel project is still named `signquest`; renaming it is a separate, optional infra change). The app is fully built out well past the original PLAN.md phases: real recognition (letters, digits, J/Z motion), practice levels, speed modes, the math lab, voice, the sign dictionary, Supabase-backed profiles/leaderboard, Persona verification, and Google sign-in are all live on `main`.
 
 ## Recognition handoff — A to B (2026-09-12)
 A's recognition engine is merged into `main`; it is ready for B to integrate into `src/games/`. B owns the game-screen wiring and scoring. A continues recognition testing and fixes. The deployed Math page is still a stub with the voice path wired; it does not yet mount the recognizer.

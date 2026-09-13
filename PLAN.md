@@ -1,11 +1,9 @@
 # PLAN.md — Signly build plan and work split
 
-> **Naming note (2026-09-12):** the product was renamed from "SignQuest" to "Signly" — see CLAUDE.md.
-
 Team of 4, all coding through Claude Code from separate accounts. Web app first.
-Clock: hacking ends **Sunday 9:00 AM**, Devpost submission (with a 3-4 minute video) due **Sunday 8:45 AM**. It is Friday ~11 PM now. Sleep is allowed and encouraged; rotate.
+Clock: hacking ends **Sunday 9:00 AM**, Devpost submission (with a 3-4 minute video) due **Sunday 8:45 AM**.
 
-**Status: Phase 1 core is landing on `main`.** `feat/voice` (C, real ElevenLabs speak/listen + a11y pass) and `feat/recognition` (A, real MediaPipe hand tracking + geometric classifier, 13 passing unit tests) are both merged. `api/coach.ts` is live and returning real Gemini coaching lines (migrated to the new Interactions API — `generateContent` is deprecated, see git log). Supabase is live. Deployed at **https://signquest-flame.vercel.app**. Sign → recognition → coaching is wireable end to end now; B's game screens are next to actually call it from a real Lesson flow instead of the stub pages. Still open from D's list: `ELEVENLABS_API_KEY` in Vercel, Persona template ID, Solana stretch.
+**Status: live at https://signly.vip** (also aliased at https://signquest-flame.vercel.app). This file describes the original build plan from early in the hackathon — the app has since grown well past Phase 1; see CLAUDE.md for current status.
 
 ## The four workstreams
 
@@ -46,7 +44,7 @@ Owns `src/lib/`, `src/meta/`, `src/app/`, and `/api`.
 - [x] Streaks and XP: `StreakXp.tsx` (badge + level bar), `bumpStreak()` in `supabase.ts`.
 - [x] Leaderboard UI (`meta/Leaderboard.tsx`) with realtime subscription, currently rendering mock rows until Supabase is live.
 - [ ] **Solana badge (stretch)**: `solanaBadge.ts`, mint a devnet achievement when a user hits a streak milestone. Only after everything else works.
-- [x] Deploy to Vercel — **live at https://signquest-flame.vercel.app**. `vercel.json` added with a catch-all rewrite so client-side routes (`/leaderboard`, `/lesson`, etc.) don't 404 on refresh/direct visit. `/api/coach` is live with real Gemini output; `/api/tts`/`/api/stt` will 500 until `ELEVENLABS_API_KEY` is set in Vercel.
+- [x] Deploy to Vercel — **live at https://signly.vip** (also aliased at https://signquest-flame.vercel.app). `vercel.json` added with a catch-all rewrite so client-side routes (`/leaderboard`, `/lesson`, etc.) don't 404 on refresh/direct visit. `/api/coach` is live with real Gemini output; `/api/tts`/`/api/stt` will 500 until `ELEVENLABS_API_KEY` is set in Vercel.
   - **Deploy gotcha:** the Vercel project (Hobby plan, under D's personal account) isn't Git-connected — `vercel git connect` fails because the Vercel GitHub App was never installed/authorized on the repo owner's (B's) GitHub account, which is a separate permission from the repo just being public. Practical effect: **`vercel deploy --prod` (which triggers a remote build) fails/hangs with a "Deployment Blocked: commit email could not be matched" error if the tip commit on `main` wasn't authored by D.** Workaround that sidesteps it entirely: build locally and upload the static output instead of asking Vercel to build — `vercel build --prod && vercel deploy --prebuilt --prod`. This has worked regardless of who authored the tip commit, since Vercel's author-verification only runs in its own remote build pipeline. True auto-deploy-on-push would still need B to install the Vercel GitHub App and grant repo access, then `vercel git connect` — worth doing if there's downtime, not worth chasing mid-crunch.
 
 ## Shared interfaces (these go in src/lib/contracts.ts, D writes them first)
