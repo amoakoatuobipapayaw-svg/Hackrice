@@ -74,3 +74,17 @@ begin
     alter publication supabase_realtime add table scores;
   end if;
 end $$;
+
+-- Storage: the "dictionary" bucket holds src/dictionary/'s ASL Citizen sign
+-- clips (see its index.ts) — created public/read via the dashboard, not
+-- here, since bucket creation isn't expressible as plain SQL the same way.
+-- The upload step itself always used the service-role key (which bypasses
+-- RLS outright), so public read was the only requirement for a while. This
+-- INSERT policy exists on top of that so A's offline extraction/upload
+-- tooling can also write using the anon key directly, without needing the
+-- service-role key. Insert-only, scoped to this one bucket — anon still
+-- cannot update or delete existing objects.
+drop policy if exists "dictionary bucket anon upload" on storage.objects;
+create policy "dictionary bucket anon upload" on storage.objects
+  for insert to anon
+  with check (bucket_id = 'dictionary');

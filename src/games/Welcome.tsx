@@ -5,10 +5,28 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { LogoMark } from "../components/ui/Logo";
 import { GameLayout, ProfileGate } from "./GameLayout";
 import { getLocalProfile } from "../lib/localProfile";
 import { SignPhrase } from "./SignPhrase";
 import { markWelcomeSeen } from "./welcomeProgress";
+
+/** A colored banner, matching Home's hero treatment, instead of the plain
+ * generic header every in-round screen uses — this page is a one-time read,
+ * not a round in progress, so it should feel like a welcome, not a task. */
+function WelcomeHero() {
+  return (
+    <div className="relative mb-7 overflow-hidden rounded-3xl border-b-8 border-brand-hover bg-brand p-6 text-white sm:p-9">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.12]" style={{ backgroundImage: "radial-gradient(#fff 1.4px, transparent 1.6px)", backgroundSize: "22px 22px" }} />
+      <div aria-hidden="true" className="pointer-events-none absolute -right-8 -bottom-12 hidden opacity-20 sm:block animate-float"><LogoMark size={200} className="[&_rect]:fill-transparent" /></div>
+      <div className="relative">
+        <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-extrabold tracking-widest uppercase"><span className="h-1.5 w-1.5 rounded-full bg-accent" />Before the alphabet</p>
+        <h1 className="mt-4 max-w-lg text-3xl leading-tight font-black tracking-tight sm:text-4xl">Intro to <span className="marker-underline text-white">ASL</span>.</h1>
+        <p className="mt-3 max-w-md text-base leading-relaxed text-white/85">A quick preview of a few everyday signs before you start the alphabet.</p>
+      </div>
+    </div>
+  );
+}
 
 const EVERYDAY_SIGNS = [
   { sign: "HELLO", note: "An open hand near the forehead, palm out, moves away from the head — like a small salute." },
@@ -25,12 +43,7 @@ export function Welcome() {
   if (!profile) return <ProfileGate />;
 
   return (
-    <GameLayout
-      mode="Before the alphabet"
-      title="Intro to ASL."
-      description="A quick preview of a few everyday signs before you start the alphabet."
-      progress={0}
-    >
+    <GameLayout hero={<WelcomeHero />}>
       <section aria-labelledby="everyday-signs-heading">
         <h2 id="everyday-signs-heading" className="text-lg font-extrabold">Your first everyday signs</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">
@@ -38,7 +51,7 @@ export function Welcome() {
           <a href="https://asl-lex.org/about.html" target="_blank" rel="noreferrer" className="font-semibold text-selected-ink underline underline-offset-2">ASL-LEX</a>{" "}
           catalog — real signs rated by fluent Deaf signers for how often they come up in everyday use. This preview isn't pulled from that dataset's numbers, but it's the kind of everyday vocabulary it points to.
         </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid items-start gap-4 sm:grid-cols-2">
           {EVERYDAY_SIGNS.map(({ sign, note }) => (
             <Card key={sign} className="p-4">
               <span className="inline-block rounded-md bg-brand-soft px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-brand uppercase">{sign}</span>

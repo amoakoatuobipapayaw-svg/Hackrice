@@ -28,6 +28,14 @@ function log(message: string): void {
   console.debug(`[stt] ${message}`);
 }
 
+/** Thrown when /api/stt responds with an error. `code` is ElevenLabs'
+ * machine-readable reason (e.g. "audio_too_short") when the response body
+ * parsed as one, so a caller can show a friendly message for a specific,
+ * recoverable case instead of the raw error text. */
+export class SttError extends Error {
+  code?: string;
+}
+
 export type SttPhase = "recording" | "transcribing";
 
 export type RecordingHandle = {
@@ -87,10 +95,28 @@ export async function beginRecording(): Promise<RecordingHandle> {
       if (!res.ok) {
         // The proxy's error body carries ElevenLabs' actual reason (rate
         // limit, invalid audio, quota, etc.) — surface it instead of just
-        // the status code, or every failure looks identical.
+        // the status code, or every failure looks identical. `detail` is
+        // itself a JSON string (ElevenLabs' raw response text, forwarded
+        // as-is by /api/stt) like {"detail":{"code":"audio_too_short",...}};
+        // pull the machine-readable code out so a caller can react to a
+        // specific, recoverable failure (a too-short clip) instead of
+        // showing that raw JSON to the user.
         const body = await res.json().catch(() => null) as { error?: string; detail?: string } | null;
-        const reason = body?.detail || body?.error;
-        throw new Error(reason ? `stt failed (${res.status}): ${reason}` : `stt request failed: ${res.status}`);
+        let code: string | undefined;
+        let message: string | undefined;
+        if (body?.detail) {
+          try {
+            const parsed = JSON.parse(body.detail) as { detail?: { code?: string; message?: string } };
+            code = parsed.detail?.code;
+            message = parsed.detail?.message;
+          } catch {
+            // detail wasn't JSON — fall through and use it as-is below.
+          }
+        }
+        const reason = message || body?.detail || body?.error;
+        const err = new SttError(reason ? `stt failed (${res.status}): ${reason}` : `stt request failed: ${res.status}`);
+        err.code = code;
+        throw err;
       }
 
       const data = (await res.json()) as { transcript: string };
