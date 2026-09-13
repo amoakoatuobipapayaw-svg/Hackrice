@@ -87,16 +87,16 @@ The letter/number vocabulary separates overlapping shapes (for example V versus 
 The desired target never forces the classifier's answer. The thumb and occlusion
 rules for A/E/M/N/S/T in particular need real-camera calibration or a trained classifier.
 
-J/Z use an opt-in stroke detector (`experimentalMotion: true`). A stable seed
-pose starts tracking, then temporary finger flexion is tolerated. Corner searches
-check a downward-and-rising hook for J or horizontal/down-diagonal/horizontal
-strokes for Z. Paths may take 200–3500 ms. Small jitter is removed in palm-size
-units; broken tracking, invalid samples and large scale jumps are rejected.
-A completed gesture confirms directly once if its target and score match. It is
-not replayed through the static one-second hold. Release before repeating.
-The lab enables this option; production lessons must opt in explicitly. The
-motion score is geometric evidence, not calibrated accuracy or the static cap.
-These changes need live-camera validation before wider lesson rollout.
+J/Z use an opt-in stroke detector (`experimentalMotion: true`, enabled in the
+lab and in Lesson/SpeedChallenge). A stable seed pose starts tracking, then
+temporary finger flexion is tolerated. Corner searches check a downward-and-rising
+hook for J or horizontal/down-diagonal/horizontal strokes for Z. Paths may take
+200–4500 ms. Small jitter is removed in palm-size units; broken tracking, invalid
+samples and large scale jumps are rejected. A completed gesture confirms directly
+once if its target and score match. It is not replayed through the static
+one-second hold. Release before repeating. The motion score is geometric
+evidence, not calibrated accuracy or the static cap. Both letters are now
+live-tested and promoted to demo tier (see the trained-model section below).
 
 ### J/Z: a trained model layered on top of the heuristic
 
@@ -130,12 +130,14 @@ and `@tensorflow/tfjs` itself is loaded from jsDelivr at runtime (`motionModel.t
 the same pattern `handLandmarker.ts` uses for MediaPipe. `@tensorflow/tfjs-node` is
 a devDependency used only by the two scripts above — it is never bundled.
 
-**Still experimental, same as the heuristic it sits on top of**: this has been
-validated against synthetic trajectories and the hand-written fixtures, not a
-real webcam. Live-camera testing (per the recognition handoff notes) decides
-whether J/Z actually belong in the demo-safe letter list — promoting them there
-follows the same one-line pattern as any other letter (see `signClassifier.ts`'s
-`CONFIDENCE_CAP` comment), and isn't done here.
+**Live-tested and promoted**: both J and Z have since been confirmed working on
+a real webcam (not just synthetic trajectories and the hand-written fixtures),
+and `signClassifier.ts`'s `CONFIDENCE_CAP` for both is now at demo tier — the
+"Motion letters" lesson unit is unlocked. The thresholds in `classifyMotion`
+were loosened from their original synthetic-only tuning during that live
+testing (see the comments in `motionClassifier.ts`); if real-world accuracy
+ever regresses, that's the first place to look, and `disableMotionML` remains
+available to force pure-heuristic scoring without a code change.
 
 ## Gemini coaching and D's backend
 

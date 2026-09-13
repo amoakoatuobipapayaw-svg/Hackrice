@@ -47,7 +47,7 @@ function CameraDemo() {
     <label className="block"><input type="checkbox" checked={experimental} onChange={event => {
       setExperimental(event.target.checked);
       setTarget(vocabulary === 'letters' ? 'L' : '1');
-    }} /> Show experimental targets (J/Z use gesture completion)</label>
+    }} /> Show experimental targets</label>
     <div className="relative my-4 aspect-[4/3] max-w-2xl overflow-hidden rounded-xl bg-slate-950">
       <video ref={videoRef} muted playsInline className="h-full w-full -scale-x-100" />
       <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full -scale-x-100" />
@@ -57,9 +57,9 @@ function CameraDemo() {
     <Readout recognition={recognition} target={target} />
     <p>For J, start with the I hand shape and trace down into a hook with your little finger.
       For Z, point your index finger and trace across, diagonally down, then across again.
-      Pause briefly in the starting hand shape, then finish within three seconds, keeping your whole hand in view.</p>
-    <p>Prototype rules, not validated ASL assessment. J/Z motion guesses are experimental; word signs are not supported.
-      J/Z can earn experimental reps here when the gesture completes. Other experimental letters may remain below the scoring threshold.</p>
+      Pause briefly in the starting hand shape, then finish within about four seconds, keeping your whole hand in view.</p>
+    <p>Prototype rules, not validated ASL assessment. J/Z are live-tested and earn real reps when the gesture completes;
+      word signs are not supported. Other experimental letters may remain below the scoring threshold.</p>
   </>;
 }
 

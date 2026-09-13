@@ -37,6 +37,7 @@ export function SpeedChallenge() {
   const recognition = useSignRecognition({
     target: started ? target : undefined,
     vocabulary: "letters",
+    experimentalMotion: true,
     onConfirm: handleConfirm,
   });
   const recognitionRef = useRef(recognition);

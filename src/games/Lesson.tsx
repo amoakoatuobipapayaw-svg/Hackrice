@@ -46,6 +46,7 @@ export function Lesson() {
     target: started ? target : undefined,
     vocabulary: "letters",
     coaching: true,
+    experimentalMotion: true,
     onConfirm: handleConfirm,
   });
 
