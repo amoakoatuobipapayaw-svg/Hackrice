@@ -88,7 +88,7 @@ export function Welcome() {
         <p className="mt-3 text-xs text-muted">
           Clips above are from{" "}
           <a href="https://www.microsoft.com/en-us/research/project/asl-citizen/" target="_blank" rel="noreferrer" className="underline underline-offset-2">Microsoft's ASL Citizen dataset</a>
-          {" "}— real Deaf and hard-of-hearing signers. ASL doesn't have a single sign for every English phrase, so multi-word entries above are shown word by word; any word without a clip shows as plain text. Want to try more? Visit the{" "}
+          {" "}— real Deaf and hard-of-hearing signers. ASL doesn't have a single sign for every English phrase, so multi-word entries above are shown word by word, skipping any word with no clip yet. Want to try more? Visit the{" "}
           <Link to="/dictionary" className="underline underline-offset-2">sign dictionary</Link>.
         </p>
       </section>

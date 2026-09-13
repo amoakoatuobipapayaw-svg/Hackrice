@@ -4,6 +4,9 @@
 // license/scope notes) — no camera, no recognition, just a reference lookup.
 import { useState } from "react";
 import { Button } from "../components/ui/Button";
+import { Icon } from "../components/ui/Icon";
+import { Caption } from "../voice/Caption";
+import { useVoice } from "../voice/useVoice";
 import { GameLayout } from "./GameLayout";
 import { SignPhrase } from "./SignPhrase";
 
@@ -12,6 +15,7 @@ const EXAMPLES = ["hello", "thank you", "my name is", "nice to meet you", "how a
 export function SignLookup() {
   const [query, setQuery] = useState("");
   const [submitted, setSubmitted] = useState("");
+  const voice = useVoice();
 
   return (
     <GameLayout
@@ -48,8 +52,20 @@ export function SignLookup() {
 
       {submitted && (
         <div className="mt-6 rounded-2xl border-2 border-line bg-surface p-5">
-          <p className="text-xs font-extrabold tracking-widest text-brand uppercase">“{submitted}”</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-extrabold tracking-widest text-brand uppercase">“{submitted}”</p>
+            <button
+              type="button"
+              onClick={() => void voice.speak(submitted)}
+              disabled={voice.isSpeaking}
+              className="flex items-center gap-1.5 rounded-lg border-2 border-line bg-surface px-3 py-1.5 text-xs font-extrabold tracking-wide text-brand uppercase hover:bg-soft disabled:opacity-60"
+            >
+              <Icon name="volume" size={16} />
+              {voice.isSpeaking ? "Speaking…" : "Hear it"}
+            </button>
+          </div>
           <div className="mt-4"><SignPhrase text={submitted} /></div>
+          <div className="mt-3"><Caption caption={voice.caption} isSpeaking={voice.isSpeaking} isListening={voice.isListening} isTranscribing={voice.isTranscribing} /></div>
         </div>
       )}
 

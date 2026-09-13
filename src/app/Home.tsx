@@ -14,6 +14,7 @@ import { SolanaBadgeCard } from '../meta/SolanaBadgeCard';
 import { StreakCalendar } from '../meta/StreakCalendar';
 import { XpBar } from '../meta/StreakXp';
 import { Roadmap } from '../games/Roadmap';
+import { SignSkeleton } from '../games/SignSkeleton';
 
 const TIPS: Array<{ icon: IconName; text: string }> = [
   { icon: 'sun', text: 'Face a window or a soft light.' },
@@ -34,9 +35,9 @@ function FingerspellName({ name }: { name: string }) {
       <p className="text-xs font-extrabold tracking-widest text-muted uppercase">Your name, fingerspelled</p>
       <ol className="flex flex-wrap gap-1.5" aria-label={`${name}, one tile per letter`}>
         {letters.map((letter, i) => (
-          <li key={i} className={`flex h-10 w-9 flex-col items-center justify-center rounded-lg border-b-4 text-lg font-black shadow-sm transition-transform hover:rotate-0 hover:-translate-y-1 motion-reduce:transition-none ${TILE_TILT[i % TILE_TILT.length]} ${i % 3 === 1 ? 'border-accent-ink/30 bg-accent text-accent-ink' : 'border-line bg-surface text-brand'}`}>
-            {letter}
-            <span className="-mt-1 text-[8px] font-bold tracking-widest text-current/60">ASL</span>
+          <li key={i} className={`flex w-11 flex-col items-center gap-0.5 rounded-lg border-b-4 pt-1.5 pb-1 shadow-sm transition-transform hover:rotate-0 hover:-translate-y-1 motion-reduce:transition-none ${TILE_TILT[i % TILE_TILT.length]} ${i % 3 === 1 ? 'border-accent-ink/30 bg-accent text-accent-ink' : 'border-line bg-surface text-brand'}`}>
+            <span className="text-lg leading-none font-black">{letter}</span>
+            <SignSkeleton sign={letter} size={34} animate={false} />
           </li>
         ))}
       </ol>
