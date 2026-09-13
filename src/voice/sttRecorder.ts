@@ -5,10 +5,15 @@
 // on a quiet mic or never quiets down in a noisy room), then it stops
 // shortly after the speaker goes quiet instead of waiting out a long timer.
 const CALIBRATION_MS = 200; // learn ambient noise before listening for speech
-const NOISE_MARGIN = 0.025; // how much louder than ambient counts as "speaking"
-const MIN_SPEECH_THRESHOLD = 0.015; // floor so a silent room doesn't self-trigger
+const NOISE_MARGIN = 0.04; // how much louder than ambient counts as "speaking"
+const MIN_SPEECH_THRESHOLD = 0.05; // floor so a silent room doesn't self-trigger
 const SILENCE_HOLD_MS = 350; // quiet time after speech before we call it done
 const MAX_RECORD_MS = 2500; // one spoken number should never need more than this
+const VOICE_BAND_LOW_HZ = 300; // human speech's fundamental+formant energy
+const VOICE_BAND_HIGH_HZ = 3400; // mostly lives in this (telephone-band) range
+const TONAL_PEAK_RATIO = 6; // a pure tone (whistling) concentrates energy in
+// one or two bins; speech spreads it across the band — discount anything
+// this peaky so whistling doesn't get mistaken for talking
 
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -25,15 +30,22 @@ function blobToBase64(blob: Blob): Promise<string> {
 /** Resolves once the stream has gone quiet after speech was heard, or the
  * safety cap is hit — whichever comes first. Spends the first
  * CALIBRATION_MS learning this mic/room's ambient noise level rather than
- * guessing a fixed volume threshold. */
+ * guessing a fixed volume threshold. Measures level as energy in the human
+ * voice band rather than raw full-spectrum loudness, so a loud whistle,
+ * music, or low rumble is much less likely to be mistaken for speech than
+ * a plain volume threshold would allow. */
 function waitForSilence(stream: MediaStream): Promise<void> {
   return new Promise((resolve) => {
     const audioContext = new AudioContext();
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 512;
+    analyser.fftSize = 1024;
     source.connect(analyser);
     const data = new Uint8Array(analyser.frequencyBinCount);
+
+    const binHz = audioContext.sampleRate / analyser.fftSize;
+    const lowBin = Math.max(0, Math.floor(VOICE_BAND_LOW_HZ / binHz));
+    const highBin = Math.min(data.length - 1, Math.ceil(VOICE_BAND_HIGH_HZ / binHz));
 
     const start = performance.now();
     let ambientSum = 0;
@@ -49,20 +61,24 @@ function waitForSilence(stream: MediaStream): Promise<void> {
       resolve();
     }
 
-    function currentRms(): number {
-      analyser.getByteTimeDomainData(data);
-      let sumSquares = 0;
-      for (const value of data) {
-        const centered = (value - 128) / 128;
-        sumSquares += centered * centered;
+    function voiceBandLevel(): number {
+      analyser.getByteFrequencyData(data);
+      let sum = 0;
+      let max = 0;
+      for (let i = lowBin; i <= highBin; i++) {
+        const v = data[i] / 255;
+        sum += v;
+        if (v > max) max = v;
       }
-      return Math.sqrt(sumSquares / data.length);
+      const avg = sum / (highBin - lowBin + 1);
+      const isTonal = max > 0 && max / (avg + 1e-6) > TONAL_PEAK_RATIO;
+      return isTonal ? avg * 0.3 : avg;
     }
 
     function tick() {
       const now = performance.now();
       const elapsed = now - start;
-      const level = currentRms();
+      const level = voiceBandLevel();
 
       if (threshold === null) {
         ambientSum += level;

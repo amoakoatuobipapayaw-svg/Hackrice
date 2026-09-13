@@ -29,6 +29,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   form.append("model_id", "scribe_v2");
   form.append("language_code", "en");
   form.append("temperature", "0");
+  // Without this, scribe_v2 annotates non-speech sound (music, whistling,
+  // etc.) inline as bracketed tags like "[whistling]" — noise that reaches
+  // it anyway should come back empty, not as a tag we'd have to filter out.
+  form.append("tag_audio_events", "false");
   // ElevenLabs wants one "keyterms" field per term, not a JSON-encoded list
   // (verified against the live API — a JSON string gets treated as a single
   // 100+ char keyword and rejected for exceeding the 50-char limit).
