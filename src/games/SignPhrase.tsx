@@ -33,16 +33,19 @@ export function SignPhrase({ text, fill = false }: {
   const videos = matches.filter((match): match is Extract<PhraseMatch, { type: "video" }> => match.type === "video");
   if (videos.length === 0) return <p className="text-sm text-muted">No sign video for “{text}” yet.</p>;
 
-  // Fixed 2-per-row columns instead of dividing width by however many clips
-  // matched: a 3-clip phrase would otherwise squeeze each clip to a third of
-  // the row, visibly smaller than a 2-clip phrase's clips right next to it in
-  // the grid. Only a lone clip spans both columns (there's no sibling to stay
-  // proportional to); a trailing odd clip in a longer phrase stays the same
-  // size as the rest instead of stretching to fill the row on its own.
+  // One row, one column per clip — never wraps a longer phrase onto a second
+  // row. A card with more clips needs more width to keep them the same size
+  // as a shorter phrase's (Welcome.tsx gives a 3+-word entry the full row for
+  // exactly this reason); this component just always lays them out in a
+  // single line and lets the container decide how much room that gets.
   return (
-    <div className={fill ? "grid grid-cols-2 items-start gap-4" : "flex flex-wrap items-start gap-4"} aria-label={`ASL video for "${text}"`}>
+    <div
+      className={fill ? "grid items-start gap-4" : "flex flex-wrap items-start gap-4"}
+      style={fill ? { gridTemplateColumns: `repeat(${videos.length}, 1fr)` } : undefined}
+      aria-label={`ASL video for "${text}"`}
+    >
       {videos.map((match, i) => (
-        <figure key={`${match.word}-${i}`} className={fill && videos.length === 1 ? "col-span-2" : !fill ? "w-36 shrink-0" : ""}>
+        <figure key={`${match.word}-${i}`} className={!fill ? "w-36 shrink-0" : ""}>
           <SignVideoClip src={videoUrl(match.file)} word={match.word} />
           <figcaption className="mt-1.5 text-center text-[11px] font-bold tracking-wide text-muted uppercase">{match.word}</figcaption>
         </figure>

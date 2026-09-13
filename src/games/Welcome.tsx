@@ -34,7 +34,10 @@ const EVERYDAY_SIGNS = [
   { sign: "PLEASE", note: "A flat hand rests on the chest, palm in, and makes a small circular rubbing motion." },
   { sign: "SORRY", note: "A closed fist makes a small circular rubbing motion on the chest." },
   { sign: "MY NAME IS", note: "Two fingers of one hand tap twice across two fingers of the other, like laying one small sign on top of another." },
-  { sign: "NICE TO MEET YOU", note: "Two pointing hands, starting apart, come together in the middle — representing two people meeting." },
+  // 3 real clips (NICE, MEET, YOU — "TO" has none), so this one alone needs
+  // the full row: 3 clips squeezed into a half-width card would each come
+  // out noticeably smaller than every other card's.
+  { sign: "NICE TO MEET YOU", note: "Two pointing hands, starting apart, come together in the middle — representing two people meeting.", wide: true },
 ];
 
 export function Welcome() {
@@ -52,13 +55,19 @@ export function Welcome() {
           catalog — real signs rated by fluent Deaf signers for how often they come up in everyday use. This preview isn't pulled from that dataset's numbers, but it's the kind of everyday vocabulary it points to.
         </p>
         <div className="mt-4 grid items-start gap-4 sm:grid-cols-2">
-          {EVERYDAY_SIGNS.map(({ sign, note }) => (
-            <Card key={sign} className="p-4">
-              <span className="inline-block rounded-md bg-brand-soft px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-brand uppercase">{sign}</span>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{note}</p>
-              <div className="mt-3 border-t border-line pt-3"><SignPhrase text={sign} fill /></div>
-            </Card>
-          ))}
+          {EVERYDAY_SIGNS.map(({ sign, note, wide }) => {
+            return (
+              <Card key={sign} className={`p-4 ${wide ? "sm:col-span-2" : ""}`}>
+                <span className="inline-block rounded-md bg-brand-soft px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-brand uppercase">{sign}</span>
+                {/* min-height reserves room for a 2-line note so a shorter
+                    one-line note doesn't leave its card's video starting
+                    higher than its row partner's — they'd otherwise fall
+                    out of alignment side by side. */}
+                <p className="mt-2 min-h-11 text-sm leading-relaxed text-muted">{note}</p>
+                <div className="mt-3 border-t border-line pt-3"><SignPhrase text={sign} fill /></div>
+              </Card>
+            );
+          })}
         </div>
         <p className="mt-3 text-xs text-muted">
           Clips above are from{" "}
