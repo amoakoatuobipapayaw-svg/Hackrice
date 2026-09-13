@@ -8,8 +8,6 @@ import type { UserProfile } from '../lib/contracts';
 import { clearLocalProfile } from '../lib/localProfile';
 import { resolveProfile } from '../lib/profile';
 import { PersonaGate } from '../meta/PersonaGate';
-import { MIN_STREAK_FOR_BADGE } from '../meta/solanaBadge';
-import { SolanaBadgeCard } from '../meta/SolanaBadgeCard';
 import { StreakCalendar } from '../meta/StreakCalendar';
 import { XpBar } from '../meta/StreakXp';
 import { Roadmap } from '../games/Roadmap';
@@ -162,8 +160,6 @@ export function Home() {
             {TIPS.map((tip) => <li key={tip.text} className="flex items-center gap-3"><span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface text-brand"><Icon name={tip.icon} size={16} /></span>{tip.text}</li>)}
           </ul>
         </section>
-
-        {profile.streak >= MIN_STREAK_FOR_BADGE && <SolanaBadgeCard streak={profile.streak} />}
       </aside>
     </div>
   </div>;
