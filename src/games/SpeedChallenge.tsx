@@ -42,6 +42,7 @@ function SpeedRound({ mode }: { mode: SpeedMode }) {
   const [matches, setMatches] = useState(0);
   const [score, setScore] = useState(0);
   const [result, setResult] = useState<RoundResult | null>(null);
+  const [celebrate, setCelebrate] = useState(0);
 
   const target = deck[cursor];
   const remaining = signsLeft(deck, cursor);
@@ -61,6 +62,7 @@ function SpeedRound({ mode }: { mode: SpeedMode }) {
     setMatches((m) => m + 1);
     setScore((s) => s + speedPoints(pointsForRep(comboStreak), mode));
     setComboStreak((c) => c + 1);
+    setCelebrate((c) => c + 1);
     drawNext();
   }
 
@@ -154,6 +156,7 @@ function SpeedRound({ mode }: { mode: SpeedMode }) {
             setStarted(true);
             recognition.start();
           }}
+          celebrate={celebrate}
         />
       </div>
 

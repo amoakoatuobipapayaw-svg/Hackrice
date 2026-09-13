@@ -38,6 +38,7 @@ export function PracticeLevel({ level }: { level: Level }) {
   const [canSkip, setCanSkip] = useState(false);
   const [result, setResult] = useState<RoundResult | null>(null);
   const [celebrating, setCelebrating] = useState(false);
+  const [celebrate, setCelebrate] = useState(0);
 
   const voice = useVoice();
   const voiceRef = useRef(voice);
@@ -54,6 +55,7 @@ export function PracticeLevel({ level }: { level: Level }) {
   function handleConfirm() {
     if (!target || result) return;
     setConfirmed((c) => c + 1);
+    setCelebrate((c) => c + 1);
     advance();
   }
 
@@ -142,7 +144,7 @@ export function PracticeLevel({ level }: { level: Level }) {
     >
       <div className="grid gap-5 md:grid-cols-2">
         <SignGuide target={target ?? level.pool[0]} targets={targets} completed={index} />
-        <CameraPanel recognition={recognition} target={target} />
+        <CameraPanel recognition={recognition} target={target} celebrate={celebrate} />
       </div>
 
       <aside className="mt-5 flex gap-4 rounded-2xl border-2 border-line bg-surface p-5" aria-label="Sign coach">

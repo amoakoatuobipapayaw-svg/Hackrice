@@ -2,7 +2,7 @@
 // the round state machine (useMathRound), and wires the two answer paths:
 // the camera (A's recognizer, numbers vocabulary, digit by digit) and the
 // microphone (C's voice hook). Gemini coaching is on for the whole round.
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useVoice } from "../../voice/useVoice";
 import { CameraPanel } from "../CameraPanel";
 import { ProfileGate } from "../GameLayout";
@@ -22,6 +22,7 @@ import type { MathGameDef } from "./types";
 export function MathGame({ game }: { game: MathGameDef }) {
   const round = useMathRound(game);
   const { problem, attempt, expectedDigit, phase } = round;
+  const [celebrate, setCelebrate] = useState(0);
 
   const voice = useVoice();
   const voiceRef = useRef(voice);
@@ -45,6 +46,7 @@ export function MathGame({ game }: { game: MathGameDef }) {
   useEffect(() => {
     if (!attempt || !problem) return;
     voiceRef.current.speak(attempt.outcome === "correct" ? "Correct!" : `The answer was ${problem.answer}.`).catch(() => {});
+    if (attempt.outcome === "correct") setCelebrate((c) => c + 1);
   }, [attempt, problem]);
 
   // The <video> mounts with the playing screen, so start the camera right
@@ -123,7 +125,7 @@ export function MathGame({ game }: { game: MathGameDef }) {
         </section>
 
         <div className="lg:col-start-2 lg:row-start-1">
-          <CameraPanel recognition={recognition} target={target} feedback={cameraFeedback} />
+          <CameraPanel recognition={recognition} target={target} feedback={cameraFeedback} celebrate={celebrate} />
         </div>
 
         <div className="lg:col-start-1 lg:row-start-2">

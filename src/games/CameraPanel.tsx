@@ -1,10 +1,19 @@
+import { useEffect } from 'react';
 import type { Recognition } from '../recognition/types';
 import { Icon } from '../components/ui/Icon';
+import { playCorrectChime } from '../lib/sfx';
 import { RecognitionCamera } from './RecognitionCamera';
 
-export function CameraPanel({ recognition: r, target, onStart, startLabel = 'Start camera', feedback }: {
+export function CameraPanel({ recognition: r, target, onStart, startLabel = 'Start camera', feedback, celebrate }: {
   recognition: Recognition; target?: string; onStart?: () => void; startLabel?: string; feedback?: string | null;
+  /** Bump this (e.g. a counter you increment) each time a sign or answer is
+   * confirmed, to trigger a brief checkmark pop + chime over the camera. */
+  celebrate?: number;
 }) {
+  useEffect(() => {
+    if (celebrate) playCorrectChime();
+  }, [celebrate]);
+
   const running = r.status === 'running';
   const loading = r.status === 'loading';
   const message = feedback ?? (r.status === 'error' ? 'Let’s reconnect your camera.' : !running ? 'Your practice space is ready.' : !r.current ? 'Bring your whole hand into view.' : r.current.confidence < 0.8 ? 'Keep your fingers clear and steady.' : target && r.current.label !== target ? 'Adjust your hand to match the prompt.' : r.holdProgress >= 1 ? 'Confirmed! Release your hand for the next sign.' : 'That’s the shape. Hold for one second.');
@@ -17,6 +26,9 @@ export function CameraPanel({ recognition: r, target, onStart, startLabel = 'Sta
         <p className="text-lg font-extrabold">{loading ? 'Getting your camera ready…' : 'This is your space to sign'}</p>
         <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">{loading ? 'The first start may take a moment.' : 'Face the light and leave room for your whole hand.'}</p>
       </div>}
+      {celebrate ? <span key={celebrate} aria-hidden="true" className="animate-pop pointer-events-none absolute inset-0 flex items-center justify-center">
+        <span className="flex h-20 w-20 items-center justify-center rounded-full bg-success text-white shadow-lg"><Icon name="check" size={40} strokeWidth={3} /></span>
+      </span> : null}
     </div>
     <div className="space-y-4 p-5">
       <div className="flex items-center justify-between gap-3"><div><p className="text-xs text-muted">Hand shape detected</p><p className="mt-1 text-2xl font-black">{r.current?.label ?? '—'}</p></div><button type="button" disabled={loading} onClick={running ? r.stop : (onStart ?? r.start)} className="rounded-xl border-2 border-b-4 border-brand-hover bg-brand px-5 py-3 text-sm font-extrabold text-white hover:bg-brand-hover active:translate-y-0.5 active:border-b-2 focus-visible:outline-2 focus-visible:outline-offset-4 disabled:opacity-50 disabled:active:translate-y-0">{loading ? 'Connecting…' : running ? 'Pause camera' : r.status === 'error' ? 'Retry camera' : startLabel}</button></div>
