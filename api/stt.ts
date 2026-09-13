@@ -47,7 +47,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!elevenRes.ok) {
     const detail = await elevenRes.text();
-    return res.status(502).json({ error: "ElevenLabs STT failed", detail });
+    // Forward ElevenLabs' real status (429 rate-limited, 401 bad key, 400
+    // bad audio, etc.) instead of flattening every failure to one code —
+    // otherwise the client can't tell "try again" from "this won't work
+    // no matter how many times you retry."
+    return res.status(elevenRes.status).json({ error: "ElevenLabs STT failed", detail });
   }
 
   const data = (await elevenRes.json()) as { text?: string };
