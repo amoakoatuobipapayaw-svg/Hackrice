@@ -38,6 +38,14 @@ state, kept out of `contracts.ts`/`localProfile.ts` on purpose) so `Roadmap.tsx`
 can show "✓ READ" once visited. `isUnitUnlocked()` treats every content unit as
 always unlocked.
 
+## Math Lab
+
+`/math` is a hub of nine games (three Easy, three Medium, three Hard), each on a
+different area of maths — arithmetic, counting, comparison, times tables,
+sequences, fractions, algebra, logic, calculus. `MathMode.tsx` renders the hub,
+or one game when the URL carries `?game=<id>`. Everything for it lives in
+`src/games/math/` — see `src/games/math/README.md`.
+
 - `GameLayout.tsx`: mode navigation, page headings, progress and profile entry.
 - `Roadmap.tsx`: the unit path rendered on Home; locked/unlocked state per unit.
 - `Welcome.tsx`: the "Welcome to ASL" content unit (grammar orientation + everyday-sign preview).
