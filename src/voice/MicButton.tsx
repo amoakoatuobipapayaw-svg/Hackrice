@@ -7,6 +7,7 @@
 // the team hasn't agreed on yet.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "../components/ui/Icon";
+import { SttError } from "./sttRecorder";
 import type { VoiceAccessibility } from "./useVoice";
 
 type MicButtonProps = Pick<VoiceAccessibility, "isListening" | "isTranscribing" | "startListening" | "stopListening"> & {
@@ -15,12 +16,18 @@ type MicButtonProps = Pick<VoiceAccessibility, "isListening" | "isTranscribing" 
 
 export function MicButton({ isListening, isTranscribing, startListening, stopListening, onResult }: MicButtonProps) {
   const [error, setError] = useState<string | null>(null);
+  // A too-short press-and-hold (ElevenLabs rejects the clip as too short to
+  // transcribe) is normal, expected, and fully recoverable by just holding a
+  // beat longer — not a real error. It gets its own friendly, non-alarming
+  // hint instead of sharing the red "something's actually wrong" message.
+  const [hint, setHint] = useState<string | null>(null);
   const pressActiveRef = useRef(false);
 
   const handlePressStart = useCallback(() => {
     if (pressActiveRef.current) return;
     pressActiveRef.current = true;
     setError(null);
+    setHint(null);
     startListening();
   }, [startListening]);
 
@@ -31,6 +38,10 @@ export function MicButton({ isListening, isTranscribing, startListening, stopLis
       const transcript = await stopListening();
       onResult(transcript);
     } catch (err) {
+      if (err instanceof SttError && err.code === "audio_too_short") {
+        setHint("Didn't catch that — hold the mic a little longer, then speak.");
+        return;
+      }
       // Surface the real browser error (permission denied vs. no mic found
       // vs. something else) instead of one generic message — this is the
       // difference between "try again" actually being possible or not.
@@ -93,7 +104,7 @@ export function MicButton({ isListening, isTranscribing, startListening, stopLis
         <Icon name="mic" size={28} />
       </button>
       <p className="text-sm text-muted" role="status">
-        {isTranscribing ? "Got it — reading that back…" : isListening ? "Listening… release when done" : "Press and hold, then speak"}
+        {isTranscribing ? "Got it — reading that back…" : isListening ? "Listening… release when done" : hint ?? "Press and hold, then speak"}
       </p>
       {error ? (
         <p role="alert" className="text-sm text-danger">
