@@ -47,13 +47,29 @@ function FingerspellName({ name }: { name: string }) {
 
 export function Home() {
   const [profile, setProfile] = useState<UserProfile | null | undefined>(undefined);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeDays] = useState(getActivityDays);
   const navigate = useNavigate();
 
   useEffect(() => {
-    resolveProfile().then(setProfile);
+    resolveProfile().then(setProfile).catch((err) => {
+      // A rejected promise here used to leave `profile` stuck at undefined
+      // forever — an indefinitely blank page with no visible error. Surface
+      // it instead: this is the account-sync path, not something to fail silently.
+      console.error("[Home] resolveProfile failed:", err);
+      setLoadError(err instanceof Error ? err.message : String(err));
+    });
   }, []);
 
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-lg font-extrabold text-ink">Couldn't load your account.</p>
+        <p className="mt-2 text-sm text-muted">{loadError}</p>
+        <button type="button" onClick={() => window.location.reload()} className="mt-5 rounded-xl border-2 border-b-4 border-brand-hover bg-brand px-5 py-2.5 text-sm font-extrabold text-white uppercase hover:bg-brand-hover">Try again</button>
+      </div>
+    );
+  }
   if (profile === undefined) return null; // resolving auth session — avoid an onboarding flash
   if (profile === null) return <Navigate to="/onboarding" replace />;
   const currentProfile = profile;

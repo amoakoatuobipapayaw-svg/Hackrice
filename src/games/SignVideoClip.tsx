@@ -35,9 +35,22 @@ export function SignVideoClip({ src, word }: { src: string; word: string }) {
         muted
         playsInline
         preload="metadata"
+        onLoadedMetadata={(e) => {
+          // Seeking forces the browser to decode and paint that instant as a
+          // still frame — a real preview of the sign instead of a flat gray
+          // box, without downloading the whole clip or generating (and
+          // hosting) a separate poster image per word.
+          const video = e.currentTarget;
+          if (video.currentTime === 0) video.currentTime = Math.min(0.15, video.duration / 2);
+        }}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onEnded={() => setPlaying(false)}
+        onEnded={(e) => {
+          setPlaying(false);
+          // Otherwise it freezes on the final frame instead of the poster.
+          const video = e.currentTarget;
+          video.currentTime = Math.min(0.15, video.duration / 2);
+        }}
         className="absolute inset-0 h-full w-full object-cover"
       />
       {!playing && (

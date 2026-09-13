@@ -1,11 +1,17 @@
 -- Signly schema. Source of truth for profiles/scores/streaks.
 -- Re-run safely: every statement is idempotent (create-if-not-exists / drop-then-create for policies).
 --
--- Hackathon-scale tradeoff: there's no Supabase Auth wired up, so RLS can't
--- scope rows to "the caller's own record" via auth.uid(). Policies below are
--- deliberately permissive (any anon-key holder can read/write any row) —
--- good enough for a demo leaderboard, not for production. Persona verification
--- is enforced client-side only (see src/meta/PersonaGate.tsx).
+-- Hackathon-scale tradeoff: policies below don't scope rows to "the caller's
+-- own record" via auth.uid() — any key holder can read/write any row. Good
+-- enough for a demo leaderboard, not for production. Persona verification is
+-- enforced client-side only (see src/meta/PersonaGate.tsx).
+--
+-- Policies grant `anon` AND `authenticated`, not just `anon`: a signed-in
+-- Google user's requests carry Postgres role `authenticated` (set by their
+-- session JWT), not `anon`. A policy scoped to `anon` only silently denies
+-- every signed-in user's own profile sync with a 403 — which is exactly what
+-- happened here once real Google sign-in went live (guests, who never carry
+-- a session JWT, always request as `anon` and never hit this).
 
 -- id equals the Supabase Auth user id for Google-authenticated accounts
 -- (see src/lib/auth.ts) — guests never get a row here at all, they stay
@@ -44,19 +50,19 @@ alter table scores enable row level security;
 alter table streaks enable row level security;
 
 drop policy if exists "public read profiles" on profiles;
-create policy "public read profiles" on profiles for select to anon using (true);
+create policy "public read profiles" on profiles for select to anon, authenticated using (true);
 drop policy if exists "public write profiles" on profiles;
-create policy "public write profiles" on profiles for all to anon using (true) with check (true);
+create policy "public write profiles" on profiles for all to anon, authenticated using (true) with check (true);
 
 drop policy if exists "public read scores" on scores;
-create policy "public read scores" on scores for select to anon using (true);
+create policy "public read scores" on scores for select to anon, authenticated using (true);
 drop policy if exists "public write scores" on scores;
-create policy "public write scores" on scores for all to anon using (true) with check (true);
+create policy "public write scores" on scores for all to anon, authenticated using (true) with check (true);
 
 drop policy if exists "public read streaks" on streaks;
-create policy "public read streaks" on streaks for select to anon using (true);
+create policy "public read streaks" on streaks for select to anon, authenticated using (true);
 drop policy if exists "public write streaks" on streaks;
-create policy "public write streaks" on streaks for all to anon using (true) with check (true);
+create policy "public write streaks" on streaks for all to anon, authenticated using (true) with check (true);
 
 -- Realtime: src/meta/Leaderboard.tsx subscribes to postgres_changes on `scores`.
 do $$
