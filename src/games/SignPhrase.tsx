@@ -35,20 +35,18 @@ export function SignPhrase({ text, fill = false }: {
 
   // Fixed 2-per-row columns instead of dividing width by however many clips
   // matched: a 3-clip phrase would otherwise squeeze each clip to a third of
-  // the row, visibly smaller than a 2-clip phrase's clips right next to it
-  // in the grid. A trailing odd clip spans both columns instead of sitting
-  // alone at half width.
+  // the row, visibly smaller than a 2-clip phrase's clips right next to it in
+  // the grid. Only a lone clip spans both columns (there's no sibling to stay
+  // proportional to); a trailing odd clip in a longer phrase stays the same
+  // size as the rest instead of stretching to fill the row on its own.
   return (
     <div className={fill ? "grid grid-cols-2 items-start gap-4" : "flex flex-wrap items-start gap-4"} aria-label={`ASL video for "${text}"`}>
-      {videos.map((match, i) => {
-        const spansFull = fill && videos.length % 2 === 1 && i === videos.length - 1;
-        return (
-          <figure key={`${match.word}-${i}`} className={fill ? (spansFull ? "col-span-2" : "") : "w-36 shrink-0"}>
-            <SignVideoClip src={videoUrl(match.file)} word={match.word} />
-            <figcaption className="mt-1.5 text-center text-[11px] font-bold tracking-wide text-muted uppercase">{match.word}</figcaption>
-          </figure>
-        );
-      })}
+      {videos.map((match, i) => (
+        <figure key={`${match.word}-${i}`} className={fill && videos.length === 1 ? "col-span-2" : !fill ? "w-36 shrink-0" : ""}>
+          <SignVideoClip src={videoUrl(match.file)} word={match.word} />
+          <figcaption className="mt-1.5 text-center text-[11px] font-bold tracking-wide text-muted uppercase">{match.word}</figcaption>
+        </figure>
+      ))}
     </div>
   );
 }
