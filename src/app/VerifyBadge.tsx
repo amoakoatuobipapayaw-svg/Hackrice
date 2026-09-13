@@ -6,8 +6,8 @@ import { useEffect, useState } from "react";
 import { Icon } from "../components/ui/Icon";
 import { onAuthChange } from "../lib/auth";
 import type { UserProfile } from "../lib/contracts";
-import { getLocalProfile, saveLocalProfile } from "../lib/localProfile";
-import { getProfile, syncProfile } from "../lib/supabase";
+import { getLocalProfile } from "../lib/localProfile";
+import { getProfile } from "../lib/supabase";
 import { openPersonaVerification, personaTemplateId } from "../meta/personaVerify";
 
 const TITLE = "Sandbox integration: no real text message is sent. Enter any phone number, then any 4-digit code to complete verification.";
@@ -47,19 +47,11 @@ export function VerifyBadge({ compact = false }: { compact?: boolean }) {
 
   if (!profile || profile.verified || !personaTemplateId) return null;
 
-  async function handleVerified() {
-    if (!profile) return;
-    const updated = { ...profile, verified: true };
-    saveLocalProfile(updated);
-    setProfile(updated);
-    await syncProfile(updated);
-  }
-
   return (
     <button
       type="button"
       title={TITLE}
-      onClick={() => openPersonaVerification(handleVerified)}
+      onClick={() => openPersonaVerification(profile, setProfile)}
       className={
         compact
           ? "flex h-9 shrink-0 items-center gap-1.5 rounded-full border-2 border-brand bg-brand-soft px-3 text-xs font-extrabold text-brand"
