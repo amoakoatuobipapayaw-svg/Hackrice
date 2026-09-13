@@ -10,7 +10,14 @@
 // 250px is plenty for the ~132px this renders at. Digits have no equivalent
 // public-domain source, so they still use HandHint's dot diagram — this
 // component only covers A-Z.
-export function LetterHint({ letter, size = 132 }: { letter: string; size?: number }) {
+export function LetterHint({ letter, size = 132, framed = true }: {
+  letter: string;
+  size?: number;
+  /** False drops the border/background/padding for a caller that already
+   * provides its own card (e.g. Home's name tiles) — at small sizes the
+   * frame's own border+padding otherwise eats most of the image away. */
+  framed?: boolean;
+}) {
   const upper = letter.toUpperCase();
   return (
     <img
@@ -19,7 +26,7 @@ export function LetterHint({ letter, size = 132 }: { letter: string; size?: numb
       width={size}
       height={size}
       style={{ width: size, height: size }}
-      className="rounded-xl border-2 border-line bg-white object-contain p-2"
+      className={framed ? "rounded-xl border-2 border-line bg-white object-contain p-2" : "object-contain"}
     />
   );
 }
