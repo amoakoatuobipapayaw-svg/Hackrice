@@ -5,7 +5,7 @@
 // for background noise to fill in.
 // Lives in voice/ so it can ship without waiting on a components/ui/ slot
 // the team hasn't agreed on yet.
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "../components/ui/Icon";
 import type { VoiceAccessibility } from "./useVoice";
 
@@ -17,14 +17,14 @@ export function MicButton({ isListening, isTranscribing, startListening, stopLis
   const [error, setError] = useState<string | null>(null);
   const pressActiveRef = useRef(false);
 
-  function handlePressStart() {
+  const handlePressStart = useCallback(() => {
     if (pressActiveRef.current) return;
     pressActiveRef.current = true;
     setError(null);
     startListening();
-  }
+  }, [startListening]);
 
-  async function handlePressEnd() {
+  const handlePressEnd = useCallback(async () => {
     if (!pressActiveRef.current) return;
     pressActiveRef.current = false;
     try {
@@ -37,7 +37,26 @@ export function MicButton({ isListening, isTranscribing, startListening, stopLis
       const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
       setError(`Couldn't use the mic (${detail}).`);
     }
-  }
+  }, [stopListening, onResult]);
+
+  // Releasing anywhere on the page ends the recording — not just releasing
+  // over the button. A mouseleave-based version cut off the instant the
+  // cursor drifted off a 64px target while still held down, which happens
+  // on basically every real press (hands aren't perfectly still); this is
+  // the standard, robust way to implement a press-and-hold control.
+  useEffect(() => {
+    function onRelease() {
+      void handlePressEnd();
+    }
+    window.addEventListener("mouseup", onRelease);
+    window.addEventListener("touchend", onRelease);
+    window.addEventListener("touchcancel", onRelease);
+    return () => {
+      window.removeEventListener("mouseup", onRelease);
+      window.removeEventListener("touchend", onRelease);
+      window.removeEventListener("touchcancel", onRelease);
+    };
+  }, [handlePressEnd]);
 
   const busy = isListening || isTranscribing;
 
@@ -46,15 +65,9 @@ export function MicButton({ isListening, isTranscribing, startListening, stopLis
       <button
         type="button"
         onMouseDown={handlePressStart}
-        onMouseUp={handlePressEnd}
-        onMouseLeave={handlePressEnd}
         onTouchStart={(e) => {
           e.preventDefault();
           handlePressStart();
-        }}
-        onTouchEnd={(e) => {
-          e.preventDefault();
-          void handlePressEnd();
         }}
         disabled={isTranscribing}
         aria-pressed={busy}
