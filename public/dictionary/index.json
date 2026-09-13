@@ -1,0 +1,138 @@
+{
+  "ME": {
+    "file": "videos/me.mp4",
+    "bytes": 252131
+  },
+  "PLEASE": {
+    "file": "videos/please.mp4",
+    "bytes": 164937
+  },
+  "MEET": {
+    "file": "videos/meet.mp4",
+    "bytes": 251177
+  },
+  "BAD": {
+    "file": "videos/bad.mp4",
+    "bytes": 253420
+  },
+  "HAPPY": {
+    "file": "videos/happy.mp4",
+    "bytes": 249187
+  },
+  "SORRY": {
+    "file": "videos/sorry.mp4",
+    "bytes": 283053
+  },
+  "WHY": {
+    "file": "videos/why.mp4",
+    "bytes": 239842
+  },
+  "FINE": {
+    "file": "videos/fine.mp4",
+    "bytes": 151418
+  },
+  "GOOD": {
+    "file": "videos/good.mp4",
+    "bytes": 192287
+  },
+  "FRIEND": {
+    "file": "videos/friend.mp4",
+    "bytes": 240293
+  },
+  "WANT": {
+    "file": "videos/want.mp4",
+    "bytes": 254358
+  },
+  "KNOW": {
+    "file": "videos/know.mp4",
+    "bytes": 185019
+  },
+  "YOU": {
+    "file": "videos/you.mp4",
+    "bytes": 160824
+  },
+  "SEE": {
+    "file": "videos/see.mp4",
+    "bytes": 136464
+  },
+  "UNDERSTAND": {
+    "file": "videos/understand.mp4",
+    "bytes": 250327
+  },
+  "DEAF": {
+    "file": "videos/deaf.mp4",
+    "bytes": 251565
+  },
+  "HOW": {
+    "file": "videos/how.mp4",
+    "bytes": 223438
+  },
+  "THANK YOU": {
+    "file": "videos/thank-you.mp4",
+    "bytes": 224123
+  },
+  "NICE": {
+    "file": "videos/nice.mp4",
+    "bytes": 303400
+  },
+  "MY": {
+    "file": "videos/my.mp4",
+    "bytes": 242962
+  },
+  "WHAT": {
+    "file": "videos/what.mp4",
+    "bytes": 191879
+  },
+  "LIKE": {
+    "file": "videos/like.mp4",
+    "bytes": 173108
+  },
+  "LEARN": {
+    "file": "videos/learn.mp4",
+    "bytes": 294456
+  },
+  "HEARING": {
+    "file": "videos/hearing.mp4",
+    "bytes": 254825
+  },
+  "WHERE": {
+    "file": "videos/where.mp4",
+    "bytes": 181465
+  },
+  "SAD": {
+    "file": "videos/sad.mp4",
+    "bytes": 314523
+  },
+  "NAME": {
+    "file": "videos/name.mp4",
+    "bytes": 280164
+  },
+  "WHO": {
+    "file": "videos/who.mp4",
+    "bytes": 194558
+  },
+  "YES": {
+    "file": "videos/yes.mp4",
+    "bytes": 140598
+  },
+  "HELLO": {
+    "file": "videos/hello.mp4",
+    "bytes": 263054
+  },
+  "SIGN": {
+    "file": "videos/sign.mp4",
+    "bytes": 268413
+  },
+  "LOVE": {
+    "file": "videos/love.mp4",
+    "bytes": 346403
+  },
+  "NO": {
+    "file": "videos/no.mp4",
+    "bytes": 192433
+  },
+  "HELP": {
+    "file": "videos/help.mp4",
+    "bytes": 323871
+  }
+}

@@ -9,6 +9,7 @@ const LINKS: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/lesson', label: 'Practice', icon: 'hand' },
   { to: '/speed', label: 'Speed', icon: 'zap' },
   { to: '/math', label: 'Math', icon: 'plus' },
+  { to: '/dictionary', label: 'Dictionary', icon: 'video' },
   { to: '/leaderboard', label: 'Leaderboard', icon: 'trophy' },
 ];
 
@@ -19,7 +20,7 @@ export function Nav() {
         <NavLink to="/" className="inline-flex rounded-xl px-2 py-3 lg:mb-6 lg:py-4" aria-label="Home"><Logo /></NavLink>
         <div className="flex gap-1 lg:hidden"><TtsToggle /><HighContrastToggle /></div>
       </div>
-      <nav aria-label="Main navigation" className="grid grid-cols-5 gap-1 lg:flex lg:flex-col lg:gap-1.5">
+      <nav aria-label="Main navigation" className="grid grid-cols-6 gap-1 lg:flex lg:flex-col lg:gap-1.5">
         {LINKS.map(({to,label,icon}) => <NavLink key={to} to={to} end={to === '/'} className={({isActive}) => `flex min-w-0 flex-col items-center gap-1 rounded-xl border-2 px-1 py-2 text-[10px] font-extrabold tracking-wide uppercase transition-colors lg:flex-row lg:gap-3 lg:px-3.5 lg:py-3 lg:text-sm ${isActive ? 'border-selected-line bg-selected text-selected-ink' : 'border-transparent text-muted hover:bg-soft hover:text-ink'}`}><Icon name={icon} size={22} className="lg:w-6" /><span className="truncate">{label}</span></NavLink>)}
       </nav>
       <div className="mt-auto hidden border-t-2 border-line pt-4 lg:block"><p className="mb-3 px-2 text-xs leading-relaxed text-muted">A little practice.<br />A world of connection.</p><div className="flex flex-col gap-1"><TtsToggle /><HighContrastToggle /></div></div>

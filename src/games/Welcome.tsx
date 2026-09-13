@@ -8,6 +8,7 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { GameLayout, ProfileGate } from "./GameLayout";
 import { getLocalProfile } from "../lib/localProfile";
+import { SignPhrase } from "./SignPhrase";
 import { markWelcomeSeen } from "./welcomeProgress";
 
 const GRAMMAR_POINTS = [
@@ -64,15 +65,22 @@ export function Welcome() {
             <div key={sign} className="rounded-2xl border border-line bg-surface p-4">
               <p className="text-sm font-extrabold tracking-wide text-brand">{sign}</p>
               <p className="mt-1 text-sm leading-relaxed text-muted">{note}</p>
+              <div className="mt-3"><SignPhrase text={sign} /></div>
             </div>
           ))}
         </div>
+        <p className="mt-3 text-xs text-muted">
+          Clips above are from{" "}
+          <a href="https://www.microsoft.com/en-us/research/project/asl-citizen/" target="_blank" rel="noreferrer" className="underline underline-offset-2">Microsoft's ASL Citizen dataset</a>
+          {" "}— real Deaf and hard-of-hearing signers. ASL doesn't have a single sign for every English phrase, so multi-word entries above are shown word by word; any word without a clip shows as plain text. Want to try more? Visit the{" "}
+          <Link to="/dictionary" className="underline underline-offset-2">sign dictionary</Link>.
+        </p>
       </section>
 
       <div className="mt-6 rounded-2xl border-2 border-dashed border-line p-5">
         <h2 className="font-bold">A note on this content</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          These descriptions are a starting point, written for this preview and not yet checked by a fluent ASL signer or Deaf educator. Treat them as an introduction, not a certified lesson — video demonstrations and a real review pass are the next step. The camera can't check these signs yet either; that's still fingerspelling and numbers only.
+          These written descriptions are a starting point and not yet checked by a fluent ASL signer or Deaf educator — treat them as an introduction, not a certified lesson. The video clips are real signers, but word-by-word playback isn't fluent ASL grammar. The camera can't check these signs yet either; that's still fingerspelling and numbers only.
         </p>
       </div>
 

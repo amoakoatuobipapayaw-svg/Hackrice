@@ -6,6 +6,7 @@ import { Onboarding } from "./Onboarding";
 import { Lesson } from "../games/Lesson";
 import { MathMode } from "../games/MathMode";
 import { SpeedChallenge } from "../games/SpeedChallenge";
+import { SignLookup } from "../games/SignLookup";
 import { Welcome } from "../games/Welcome";
 import { recordActivity } from "../lib/activityLog";
 import { Leaderboard } from "../meta/Leaderboard";
@@ -34,6 +35,7 @@ function App() {
           <Route path="/speed" element={<SpeedChallenge />} />
           <Route path="/math" element={<MathMode />} />
           <Route path="/welcome" element={<Welcome />} />
+          <Route path="/dictionary" element={<SignLookup />} />
         </Routes>
       </main>
     </div>
