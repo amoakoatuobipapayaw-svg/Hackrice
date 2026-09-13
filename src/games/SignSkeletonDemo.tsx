@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { SignSkeleton } from "./SignSkeleton";
 
-// I, L, V, W, Y, 9: verified against the real classifier (see handPoses.ts).
-// A: unverified placeholder. C: shows the "no demo yet" fallback.
-const SAMPLES = ["I", "L", "V", "W", "Y", "9", "A", "C"];
+// All verified against the real classifier except A (unverified placeholder).
+// C shows the "no demo yet" fallback — see handPoses.ts for the TODO list.
+const SAMPLES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "B", "D", "F", "H", "I", "K", "L", "O", "P", "U", "V", "W", "Y", "A", "C"];
 
 export function SignSkeletonDemo() {
   const [mirror, setMirror] = useState(true);

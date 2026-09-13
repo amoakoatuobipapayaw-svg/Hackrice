@@ -24,7 +24,15 @@ function fit(pose: HandPose, size: number): { x: number; y: number }[] {
 
 export function HandHint({ digit, size = 108 }: { digit: string; size?: number }) {
   const pose = TARGET_POSES[digit];
-  if (!pose) return null;
+  if (!pose) {
+    // Blank space here reads as a rendering bug, not "no diagram yet" —
+    // say so instead, same reasoning as SignSkeleton's fallback.
+    return (
+      <div style={{ width: size, height: size }} className="flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-line text-center">
+        <span className="text-[10px] font-bold leading-tight text-muted">No diagram yet for "{digit}"</span>
+      </div>
+    );
+  }
   const points = fit(pose, size);
   const r = Math.max(2.5, size / 26);
   return (
