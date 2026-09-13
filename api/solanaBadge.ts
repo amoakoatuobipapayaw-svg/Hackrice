@@ -6,7 +6,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { Connection, Keypair, PublicKey, clusterApiUrl } from "@solana/web3.js";
 import { getOrCreateAssociatedTokenAccount, mintTo } from "@solana/spl-token";
-import bs58 from "bs58";
 
 const MIN_STREAK_FOR_BADGE = 3;
 
@@ -35,7 +34,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
-  const authority = Keypair.fromSecretKey(bs58.decode(authoritySecret));
+  // SOLANA_MINT_AUTHORITY_SECRET is a JSON array of 64 numbers (the same
+  // format Solana CLI keypair files use) rather than base58 — bs58@6 is
+  // ESM-only and Vercel's Node function bundler can't require() it,
+  // which crashed this function entirely before this was caught.
+  const authority = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(authoritySecret)));
   const mint = new PublicKey(mintAddress);
 
   try {
