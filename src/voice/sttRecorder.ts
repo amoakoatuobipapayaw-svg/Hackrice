@@ -78,7 +78,12 @@ export async function beginRecording(): Promise<RecordingHandle> {
       });
       log(`/api/stt responded (${res.status})`);
       if (!res.ok) {
-        throw new Error(`stt request failed: ${res.status}`);
+        // The proxy's error body carries ElevenLabs' actual reason (rate
+        // limit, invalid audio, quota, etc.) — surface it instead of just
+        // the status code, or every failure looks identical.
+        const body = await res.json().catch(() => null) as { error?: string; detail?: string } | null;
+        const reason = body?.detail || body?.error;
+        throw new Error(reason ? `stt failed (${res.status}): ${reason}` : `stt request failed: ${res.status}`);
       }
 
       const data = (await res.json()) as { transcript: string };
