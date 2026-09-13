@@ -13,7 +13,7 @@ export function MathIntro({ game, onStart }: { game: MathGameDef; onStart: () =>
   const steps: { icon: IconName; title: string; text: string }[] = [
     { icon: "lightbulb", title: "Solve it", text: `${game.length} problems on ${game.topic.toLowerCase()}. No timer — think it through.` },
     { icon: "hand", title: "Sign it", text: game.maxDigits > 1 ? "Sign the answer one digit at a time, left to right, holding each for a second." : "Sign the digit to your camera and hold it steady for one second." },
-    { icon: "mic", title: "Or say it", text: "Tap the mic and speak the number instead. Both paths score the same." },
+    { icon: "mic", title: "Or say it", text: "Press and hold the mic, speak the number, then release. Both paths score the same." },
     { icon: "star", title: "Earn XP", text: `${pointsFor(game.difficulty, 0)} points per answer, more on a combo.${DIFFICULTY_WEIGHT[game.difficulty] > 1 ? ` This tier pays ${DIFFICULTY_WEIGHT[game.difficulty]}× XP.` : " XP counts toward the leaderboard."}` },
   ];
   return (

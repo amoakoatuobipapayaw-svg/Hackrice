@@ -38,8 +38,15 @@ export type RecordingHandle = {
 
 export async function beginRecording(): Promise<RecordingHandle> {
   const startedAt = performance.now();
+  // autoGainControl used to be off because it fought a real-time volume
+  // threshold this file no longer has (recording is now purely press/
+  // release, not amplitude-gated) — leaving it off just meant quieter or
+  // farther-from-the-mic speech got sent to ElevenLabs at too low a level
+  // to register as speech at all, while an already-loud clip (e.g. a
+  // synthesized TTS clip) had no such problem. Nothing left for it to
+  // fight now, so turn it back on.
   const stream = await navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
   });
   const recorder = new MediaRecorder(stream);
   const chunks: BlobPart[] = [];

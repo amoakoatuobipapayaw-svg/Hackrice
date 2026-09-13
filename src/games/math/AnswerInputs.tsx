@@ -25,7 +25,7 @@ export function AnswerInputs({ voice, onTranscript, onReveal, answering, multiDi
         <div className="min-w-0 flex-1">
           <p className="text-sm font-extrabold">Prefer to say it?</p>
           <p className="mt-1 text-xs leading-relaxed text-muted">
-            Tap the mic and speak the whole number{multiDigit ? ' — say "twelve", not "one, two"' : ""}.
+            Press and hold the mic, then speak the whole number{multiDigit ? ' — say "twelve", not "one, two"' : ""}, and release.
           </p>
         </div>
       </div>
