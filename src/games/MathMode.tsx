@@ -74,7 +74,17 @@ export function MathMode() {
   }, [problemIndex, profile, result, correct]);
 
   function handleVoiceAnswer(transcript: string) {
-    advance(parseSpokenNumber(transcript) === problem.answer);
+    const spoken = parseSpokenNumber(transcript);
+    if (spoken === null) {
+      // Nothing number-shaped in the transcript — likely background noise
+      // or an unrelated word. Don't burn the attempt; just ask them to
+      // try again.
+      if (advanceTimer.current) clearTimeout(advanceTimer.current);
+      setFeedback("Didn't catch a number — try again.");
+      advanceTimer.current = setTimeout(() => setFeedback(null), 1500);
+      return;
+    }
+    advance(spoken === problem.answer);
   }
 
   if (!profile) return <ProfileGate />;
