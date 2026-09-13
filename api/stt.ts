@@ -29,6 +29,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   form.append("model_id", "scribe_v2");
   form.append("language_code", "en");
   form.append("temperature", "0");
+  // Without this, scribe_v2 annotates non-speech sound (music, whistling,
+  // etc.) inline as bracketed tags like "[whistling]" — noise that reaches
+  // it anyway should come back empty, not as a tag we'd have to filter out.
+  form.append("tag_audio_events", "false");
   // ElevenLabs wants one "keyterms" field per term, not a JSON-encoded list
   // (verified against the live API — a JSON string gets treated as a single
   // 100+ char keyword and rejected for exceeding the 50-char limit).
@@ -43,7 +47,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!elevenRes.ok) {
     const detail = await elevenRes.text();
-    return res.status(502).json({ error: "ElevenLabs STT failed", detail });
+    // Forward ElevenLabs' real status (429 rate-limited, 401 bad key, 400
+    // bad audio, etc.) instead of flattening every failure to one code —
+    // otherwise the client can't tell "try again" from "this won't work
+    // no matter how many times you retry."
+    return res.status(elevenRes.status).json({ error: "ElevenLabs STT failed", detail });
   }
 
   const data = (await elevenRes.json()) as { text?: string };

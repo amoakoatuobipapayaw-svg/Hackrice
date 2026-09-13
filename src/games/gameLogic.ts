@@ -5,6 +5,7 @@
 import type { GameMode, RoundResult, UserProfile } from "../lib/contracts";
 import { bumpStreak, postScore, syncProfile } from "../lib/supabase";
 import { saveLocalProfile } from "../lib/localProfile";
+import { celebrateLevelUp } from "../meta/levelUpBus";
 import { levelForXp } from "../meta/StreakXp";
 
 export const LESSON_LENGTH = 5;
@@ -37,6 +38,7 @@ export async function completeRound(profile: UserProfile, result: RoundResult): 
   if (!profile.email) {
     const updated: UserProfile = { ...profile, xp, level: levelForXp(xp) };
     saveLocalProfile(updated);
+    announceLevelUp(profile, updated);
     return updated;
   }
 
@@ -55,5 +57,12 @@ export async function completeRound(profile: UserProfile, result: RoundResult): 
     });
   }
 
+  announceLevelUp(profile, updated);
   return updated;
+}
+
+/** All three modes fund this one function, so it's the single place a
+ * level-up can be detected without each game screen comparing levels itself. */
+function announceLevelUp(before: UserProfile, after: UserProfile): void {
+  if (after.level > before.level) celebrateLevelUp(after.level);
 }

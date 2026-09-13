@@ -72,10 +72,4 @@ export type UserProfile = {
   xp: number;
   level: number;
   verified: boolean;
-  /** IDs of games/signCatalog.ts UNITS the learner has finished, driving the
-   * roadmap's sequential unlock (see isUnitUnlocked). Local-only for now —
-   * not synced to Supabase (lib/supabase.ts's syncProfile upserts a fixed
-   * column list), so this won't yet follow a signed-in user across devices.
-   * Optional so existing stored profiles without it still parse. */
-  completedUnits?: string[];
 };

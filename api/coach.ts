@@ -6,7 +6,11 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 // Gemini's Interactions API (generateContent is deprecated — see
 // https://ai.google.dev/gemini-api/docs/interactions-breaking-changes-may-2026).
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
+// gemini-3.5-flash-lite, not gemini-3.8-flash: free-tier quota is per-model,
+// and heavy testing during the hackathon exhausted 3.8-flash's daily quota
+// (confirmed exhausted across a long stretch of this session, not just a
+// transient rate limit). Lite is plenty for a one-sentence coaching tip.
+const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });

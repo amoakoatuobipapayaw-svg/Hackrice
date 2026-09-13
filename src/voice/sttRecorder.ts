@@ -1,14 +1,16 @@
 // Records a mic clip and sends it to /api/stt (ElevenLabs) for transcription.
-// Answers here are always a single spoken word (a digit), so this is tuned
-// to grab that one word and get out: a short calibration window learns the
-// room's actual noise floor (a fixed volume threshold either never triggers
-// on a quiet mic or never quiets down in a noisy room), then it stops
-// shortly after the speaker goes quiet instead of waiting out a long timer.
-const CALIBRATION_MS = 200; // learn ambient noise before listening for speech
-const NOISE_MARGIN = 0.025; // how much louder than ambient counts as "speaking"
-const MIN_SPEECH_THRESHOLD = 0.015; // floor so a silent room doesn't self-trigger
-const SILENCE_HOLD_MS = 350; // quiet time after speech before we call it done
-const MAX_RECORD_MS = 2500; // one spoken number should never need more than this
+// Answers here are always a single spoken word (a digit).
+//
+// This used to guess how long to record — first with a real-time
+// voice-activity detector (a volume threshold, then frequency-band-limited,
+// then widened...), later a fixed duration. Both approaches hit the same
+// wall: nobody's reaction time and speech length is the same, so any guess
+// either cuts someone off mid-word or leaves dead air for background noise
+// to fill. beginRecording()/stopAndTranscribe() instead let the caller (a
+// press-and-hold mic button) decide exactly when to start and stop, the way
+// a walkie-talkie works — no detection, no duration to mistune.
+const MIN_RECORD_MS = 300; // avoid sending a near-empty clip from a stray tap
+const MAX_RECORD_MS = 8000; // safety cap if something forgets to call stop
 
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -22,89 +24,29 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-/** Resolves once the stream has gone quiet after speech was heard, or the
- * safety cap is hit — whichever comes first. Spends the first
- * CALIBRATION_MS learning this mic/room's ambient noise level rather than
- * guessing a fixed volume threshold. */
-function waitForSilence(stream: MediaStream): Promise<void> {
-  return new Promise((resolve) => {
-    const audioContext = new AudioContext();
-    const source = audioContext.createMediaStreamSource(stream);
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 512;
-    source.connect(analyser);
-    const data = new Uint8Array(analyser.frequencyBinCount);
-
-    const start = performance.now();
-    let ambientSum = 0;
-    let ambientSamples = 0;
-    let threshold: number | null = null;
-    let hasSpoken = false;
-    let silenceSince: number | null = null;
-    let frame: number;
-
-    function finish() {
-      cancelAnimationFrame(frame);
-      void audioContext.close();
-      resolve();
-    }
-
-    function currentRms(): number {
-      analyser.getByteTimeDomainData(data);
-      let sumSquares = 0;
-      for (const value of data) {
-        const centered = (value - 128) / 128;
-        sumSquares += centered * centered;
-      }
-      return Math.sqrt(sumSquares / data.length);
-    }
-
-    function tick() {
-      const now = performance.now();
-      const elapsed = now - start;
-      const level = currentRms();
-
-      if (threshold === null) {
-        ambientSum += level;
-        ambientSamples += 1;
-        if (elapsed >= CALIBRATION_MS) {
-          threshold = Math.max(MIN_SPEECH_THRESHOLD, ambientSum / ambientSamples + NOISE_MARGIN);
-        }
-        frame = requestAnimationFrame(tick);
-        return;
-      }
-
-      if (level > threshold) {
-        hasSpoken = true;
-        silenceSince = null;
-      } else if (hasSpoken && silenceSince === null) {
-        silenceSince = now;
-      }
-
-      const wentQuietAfterSpeech = hasSpoken && silenceSince !== null && now - silenceSince >= SILENCE_HOLD_MS;
-
-      if (wentQuietAfterSpeech || elapsed >= MAX_RECORD_MS) {
-        finish();
-        return;
-      }
-      frame = requestAnimationFrame(tick);
-    }
-    frame = requestAnimationFrame(tick);
-  });
-}
-
 function log(message: string): void {
   console.debug(`[stt] ${message}`);
 }
 
 export type SttPhase = "recording" | "transcribing";
 
-export async function recordAndTranscribe(onPhase?: (phase: SttPhase) => void): Promise<string> {
-  // Auto gain control actively works against a volume-threshold VAD — it
-  // continuously renormalizes level, so speech and silence can end up
-  // looking similarly "loud" after processing.
+export type RecordingHandle = {
+  /** Stops the recording and returns the transcript. Waits out MIN_RECORD_MS
+   * first if called too soon after starting. */
+  stopAndTranscribe: () => Promise<string>;
+};
+
+export async function beginRecording(): Promise<RecordingHandle> {
+  const startedAt = performance.now();
+  // autoGainControl used to be off because it fought a real-time volume
+  // threshold this file no longer has (recording is now purely press/
+  // release, not amplitude-gated) — leaving it off just meant quieter or
+  // farther-from-the-mic speech got sent to ElevenLabs at too low a level
+  // to register as speech at all, while an already-loud clip (e.g. a
+  // synthesized TTS clip) had no such problem. Nothing left for it to
+  // fight now, so turn it back on.
   const stream = await navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
   });
   const recorder = new MediaRecorder(stream);
   const chunks: BlobPart[] = [];
@@ -115,29 +57,56 @@ export async function recordAndTranscribe(onPhase?: (phase: SttPhase) => void): 
   });
 
   recorder.start();
+  log("recording started");
+  const safetyTimer = setTimeout(() => {
+    if (recorder.state !== "inactive") recorder.stop();
+  }, MAX_RECORD_MS);
+
+  return {
+    async stopAndTranscribe(): Promise<string> {
+      const elapsed = performance.now() - startedAt;
+      if (elapsed < MIN_RECORD_MS) {
+        await new Promise((resolve) => setTimeout(resolve, MIN_RECORD_MS - elapsed));
+      }
+      clearTimeout(safetyTimer);
+      if (recorder.state !== "inactive") recorder.stop();
+      stream.getTracks().forEach((track) => track.stop());
+      log("recording stopped");
+
+      const audioBlob = await recorded;
+      log(`recorder flushed, blob size ${audioBlob.size}B`);
+      const audioBase64 = await blobToBase64(audioBlob);
+      log("base64-encoded, sending to /api/stt");
+
+      const res = await fetch("/api/stt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audioBase64, mimeType: audioBlob.type || "audio/webm" }),
+      });
+      log(`/api/stt responded (${res.status})`);
+      if (!res.ok) {
+        // The proxy's error body carries ElevenLabs' actual reason (rate
+        // limit, invalid audio, quota, etc.) — surface it instead of just
+        // the status code, or every failure looks identical.
+        const body = await res.json().catch(() => null) as { error?: string; detail?: string } | null;
+        const reason = body?.detail || body?.error;
+        throw new Error(reason ? `stt failed (${res.status}): ${reason}` : `stt request failed: ${res.status}`);
+      }
+
+      const data = (await res.json()) as { transcript: string };
+      log(`transcript: "${data.transcript}" — total`);
+      return data.transcript;
+    },
+  };
+}
+
+/** Fixed-duration fallback for a plain tap-once "listen" — kept for
+ * VoiceApi.listen()'s contract, but MicButton uses beginRecording() above
+ * for press-and-hold instead. */
+export async function recordAndTranscribe(onPhase?: (phase: SttPhase) => void): Promise<string> {
   onPhase?.("recording");
-  await waitForSilence(stream);
-  log("silence detected, stopping recorder");
-  recorder.stop();
-  stream.getTracks().forEach((track) => track.stop());
-
-  const audioBlob = await recorded;
-  log(`recorder flushed, blob size ${audioBlob.size}B`);
-  const audioBase64 = await blobToBase64(audioBlob);
-  log("base64-encoded, sending to /api/stt");
+  const handle = await beginRecording();
+  await new Promise((resolve) => setTimeout(resolve, 2800));
   onPhase?.("transcribing");
-
-  const res = await fetch("/api/stt", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ audioBase64, mimeType: audioBlob.type || "audio/webm" }),
-  });
-  log(`/api/stt responded (${res.status})`);
-  if (!res.ok) {
-    throw new Error(`stt request failed: ${res.status}`);
-  }
-
-  const data = (await res.json()) as { transcript: string };
-  log(`transcript: "${data.transcript}" — total`);
-  return data.transcript;
+  return handle.stopAndTranscribe();
 }

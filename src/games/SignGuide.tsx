@@ -1,4 +1,5 @@
 import { Icon } from '../components/ui/Icon';
+import { HandHint } from './math/HandHint';
 
 const GUIDES: Record<string, { name: string; steps: string[] }> = {
   A: { name: 'How to sign A', steps: ['Make a fist with your palm facing the camera.', 'Rest your thumb alongside your fist, not across it.', 'Keep your wrist steady and upright.'] },
@@ -25,18 +26,38 @@ const GUIDES: Record<string, { name: string; steps: string[] }> = {
   W: { name: 'How to sign W', steps: ['Extend your index, middle, and ring fingers.', 'Spread them comfortably apart.', 'Keep your little finger folded and your thumb tucked.'] },
   X: { name: 'How to sign X', steps: ['Make a loose fist.', 'Bend your index finger into a hook shape.', 'Keep your thumb resting alongside it.'] },
   Y: { name: 'How to sign Y', steps: ['Extend your thumb and little finger.', 'Fold your index, middle, and ring fingers.', 'Keep your hand upright and fully in view.'] },
+  // J and Z are the two letters that move (see recognition/motionClassifier.ts):
+  // the hand shape alone isn't the sign, the path it travels is.
+  J: { name: 'How to sign J', steps: ['Start in the I shape: little finger up, the rest folded.', 'Trace a J in the air with your little finger — straight down, then hook to the side.', 'Keep the hand shape steady while it travels; only your hand moves.'] },
+  Z: { name: 'How to sign Z', steps: ['Point your index finger, other fingers folded.', 'Draw a Z in the air: across, diagonally down, then across again.', 'Keep the strokes crisp and stay inside the camera frame.'] },
+  // Digits 0-9. These follow the number rules in recognition/signClassifier.ts,
+  // where 6-9 are a thumb touching one fingertip and the rest held straight.
+  '0': { name: 'How to sign 0', steps: ['Curve your fingers and thumb until the tips meet.', 'Shape a rounded O — that circle is zero.', 'Keep the opening facing the camera.'] },
+  '1': { name: 'How to sign 1', steps: ['Point your index finger straight up.', 'Fold your middle, ring, and little fingers into your palm.', 'Keep your thumb tucked against them, not out to the side.'] },
+  '2': { name: 'How to sign 2', steps: ['Extend your index and middle fingers.', 'Spread them apart into a V.', 'Fold your ring and little fingers with your thumb tucked.'] },
+  '3': { name: 'How to sign 3', steps: ['Extend your thumb, index, and middle fingers.', 'Spread the three comfortably apart.', 'Fold your ring and little fingers down.'] },
+  '4': { name: 'How to sign 4', steps: ['Hold four fingers straight up, spread apart.', 'Fold your thumb across your palm.', 'Keep your palm facing the camera.'] },
+  '5': { name: 'How to sign 5', steps: ['Spread all five fingers wide.', 'Keep your thumb out to the side, away from your palm.', 'Relax your wrist and face your palm at the camera.'] },
+  '6': { name: 'How to sign 6', steps: ['Touch your thumb to your little fingertip.', 'Hold your index, middle, and ring fingers straight up.', 'Keep your palm facing the camera.'] },
+  '7': { name: 'How to sign 7', steps: ['Touch your thumb to your ring fingertip.', 'Hold your index, middle, and little fingers straight up.', 'Keep your palm facing the camera.'] },
+  '8': { name: 'How to sign 8', steps: ['Touch your thumb to your middle fingertip.', 'Hold your index, ring, and little fingers straight up.', 'Keep your palm facing the camera.'] },
+  '9': { name: 'How to sign 9', steps: ['Touch your thumb to your index fingertip.', 'Hold your middle, ring, and little fingers straight up.', 'Keep your palm facing the camera.'] },
 };
 
 export function SignGuide({ target, completed = 0, targets = [] }: { target: string; completed?: number; targets?: readonly string[] }) {
   const guide = GUIDES[target];
   return <section className="flex h-full flex-col rounded-2xl border-2 border-line bg-surface p-6 sm:p-8" aria-label={`Guide for ${target}`}>
     <div className="flex items-center justify-between"><span className="text-xs font-extrabold tracking-widest text-brand uppercase">Your next hand shape</span><span className="rounded-full bg-soft px-3 py-1 text-xs font-bold text-muted">ASL · One hand</span></div>
-    <div className="my-6 flex items-center justify-center gap-8 rounded-2xl bg-soft py-7">
+    <div className="my-6 flex flex-wrap items-center justify-center gap-6 rounded-2xl bg-soft py-7 sm:gap-8">
       <span className="flex h-32 w-28 -rotate-2 flex-col items-center justify-center rounded-2xl border-b-8 border-brand-hover bg-brand text-[88px] leading-none font-black tracking-tight text-white shadow-md sm:h-36 sm:w-32 sm:text-[100px]">{target}<span className="mt-1 text-[10px] font-bold tracking-widest text-white/70">ASL</span></span>
+      <div className="flex flex-col items-center gap-1">
+        <HandHint digit={target} size={132} />
+        <span className="text-[11px] font-bold tracking-wide text-muted uppercase">Copy this shape</span>
+      </div>
       <div className="max-w-28 text-sm leading-relaxed text-brand">Shape it.<br />Hold it.<br /><span className="font-bold text-brand">You’ve got this.</span></div>
     </div>
     <h2 className="text-xl font-extrabold">{guide?.name ?? 'Keep your hand in view.'}</h2>
     <ol className="mt-5 space-y-4">{guide?.steps.map((step, i) => <li key={step} className="flex gap-3 text-sm leading-relaxed text-muted"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-extrabold text-brand">{i + 1}</span>{step}</li>)}</ol>
-    {targets.length > 0 && <div className="mt-auto pt-7"><p className="mb-3 text-xs font-extrabold tracking-widest text-muted uppercase">Your five-sign journey</p><ol className="flex gap-2" aria-label="Lesson steps">{targets.map((letter, i) => <li key={i} aria-current={i === completed ? 'step' : undefined} aria-label={`${letter}: ${i < completed ? 'complete' : i === completed ? 'current' : 'up next'}`} className={`flex h-11 flex-1 items-center justify-center rounded-xl border-2 text-sm font-bold ${i < completed ? 'border-brand bg-brand text-white' : i === completed ? 'border-brand bg-soft text-ink' : 'border-line text-muted'}`}>{i < completed ? <Icon name="check" size={18} strokeWidth={3} /> : letter}</li>)}</ol></div>}
+    {targets.length > 0 && <div className="mt-auto pt-7"><p className="mb-3 text-xs font-extrabold tracking-widest text-muted uppercase">Your {targets.length}-sign journey</p><ol className="grid gap-2" aria-label="Lesson steps" style={{ gridTemplateColumns: `repeat(${Math.min(targets.length, 6)}, minmax(0, 1fr))` }}>{targets.map((letter, i) => <li key={i} aria-current={i === completed ? 'step' : undefined} aria-label={`${letter}: ${i < completed ? 'complete' : i === completed ? 'current' : 'up next'}`} className={`flex h-11 items-center justify-center rounded-xl border-2 text-sm font-bold ${i < completed ? 'border-brand bg-brand text-white' : i === completed ? 'border-brand bg-soft text-ink' : 'border-line text-muted'}`}>{i < completed ? <Icon name="check" size={18} strokeWidth={3} /> : letter}</li>)}</ol></div>}
   </section>;
 }

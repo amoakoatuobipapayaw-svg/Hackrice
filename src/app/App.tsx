@@ -10,6 +10,7 @@ import { SignLookup } from "../games/SignLookup";
 import { Welcome } from "../games/Welcome";
 import { recordActivity } from "../lib/activityLog";
 import { Leaderboard } from "../meta/Leaderboard";
+import { LevelUpToast } from "../meta/LevelUpToast";
 
 function App() {
   // Every visit marks today on the streak calendar (see lib/activityLog.ts).
@@ -26,6 +27,7 @@ function App() {
         Skip to main content
       </a>
       <Nav />
+      <LevelUpToast />
       <main id="main-content" tabIndex={-1} className="lg:pl-60">
         <Routes>
           <Route path="/" element={<Home />} />

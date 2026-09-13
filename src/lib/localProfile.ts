@@ -34,7 +34,6 @@ export function createLocalProfile(name: string): UserProfile {
     xp: 0,
     level: 1,
     verified: false,
-    completedUnits: [],
   };
   saveLocalProfile(profile);
   return profile;
