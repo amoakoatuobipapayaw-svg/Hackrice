@@ -2,6 +2,13 @@
 // native <video controls> — at the small widths these clips are shown, native
 // controls collapse into an overflow "···" menu that hides the play button
 // entirely. Click/tap anywhere on the clip to toggle play/pause.
+//
+// Every ASL Citizen clip is 640x480 (checked directly against the mp4s'
+// tkhd boxes — the dataset ships one fixed webcam resolution), and the
+// signer doesn't fill that whole 4:3 frame — there's real background/margin
+// on the sides. object-cover + a taller-than-wide aspect ratio crops that
+// margin away and zooms toward center, where the signer already is, rather
+// than showing the raw frame letterboxed inside a narrower card.
 import { useRef, useState } from "react";
 
 export function SignVideoClip({ src, word }: { src: string; word: string }) {
@@ -19,7 +26,7 @@ export function SignVideoClip({ src, word }: { src: string; word: string }) {
     <button
       type="button"
       onClick={toggle}
-      className="group relative block w-full overflow-hidden rounded-xl border border-line bg-canvas"
+      className="group relative block aspect-square w-full overflow-hidden rounded-xl border border-line bg-canvas"
       aria-label={`${playing ? "Pause" : "Play"} the sign for ${word}`}
     >
       <video
@@ -31,7 +38,7 @@ export function SignVideoClip({ src, word }: { src: string; word: string }) {
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)}
-        className="block w-full"
+        className="absolute inset-0 h-full w-full object-cover"
       />
       {!playing && (
         <span className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/35">

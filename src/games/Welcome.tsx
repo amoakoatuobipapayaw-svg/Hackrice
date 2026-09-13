@@ -12,18 +12,16 @@ import { SignPhrase } from "./SignPhrase";
 import { markWelcomeSeen } from "./welcomeProgress";
 
 type Tone = "brand" | "accent" | "success";
-const TONES: readonly Tone[] = ["brand", "accent", "success"];
-const NUMBER_BADGE: Record<Tone, string> = {
-  brand: "bg-brand text-white",
-  accent: "bg-accent text-accent-ink",
-  success: "bg-success text-white",
-};
 const CARD_ACCENT: Record<Tone, string> = {
   brand: "border-l-brand",
   accent: "border-l-accent",
   success: "border-l-success",
 };
 
+// The first two get their own full card — the most load-bearing orientation
+// (word-for-word English mapping is the single biggest misconception a
+// fingerspelling-only roadmap risks). The rest are just as true, but don't
+// need equal visual weight to land, so they're a compact list instead.
 const GRAMMAR_POINTS = [
   { title: "Its own grammar", body: "ASL isn't English signed word for word. It has its own grammar and word order, built for a visual, spatial language rather than a spoken one." },
   { title: "Facial expression carries meaning", body: "Eyebrows, mouth shape, and eye gaze aren't just emotion — they can mark a question, describe intensity, or change a sign's meaning entirely." },
@@ -31,6 +29,7 @@ const GRAMMAR_POINTS = [
   { title: "Space is grammar too", body: "Signers place people, places, and ideas at points in the space around them, then point back to those points later — space stands in for pronouns and location." },
   { title: "Movement changes meaning", body: "The letters J and Z in this course are one small example: the same starting handshape, a different path traced through the air, a different letter." },
 ];
+const [FEATURED_POINTS, MORE_POINTS] = [GRAMMAR_POINTS.slice(0, 2), GRAMMAR_POINTS.slice(2)];
 
 const EVERYDAY_SIGNS = [
   { sign: "HELLO", note: "An open hand near the forehead, palm out, moves away from the head — like a small salute." },
@@ -55,18 +54,22 @@ export function Welcome() {
       progressLabel="A short read, no camera needed"
     >
       <div className="space-y-3">
-        {GRAMMAR_POINTS.map((point, i) => {
-          const tone = TONES[i % TONES.length];
-          return (
-            <Card key={point.title} className={`flex gap-4 border-l-4 p-5 ${CARD_ACCENT[tone]}`}>
-              <span aria-hidden="true" className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black ${NUMBER_BADGE[tone]}`}>{i + 1}</span>
-              <div>
-                <h2 className="text-sm font-bold text-ink">{point.title}</h2>
-                <p className="mt-1 text-sm leading-relaxed text-muted">{point.body}</p>
-              </div>
-            </Card>
-          );
-        })}
+        {FEATURED_POINTS.map((point, i) => (
+          <Card key={point.title} className={`border-l-4 p-5 ${CARD_ACCENT[(["brand", "accent"] as const)[i]]}`}>
+            <h2 className="text-sm font-bold text-ink">{point.title}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-muted">{point.body}</p>
+          </Card>
+        ))}
+        <Card className="p-5">
+          <h2 className="text-sm font-bold text-ink">A few more things</h2>
+          <ul className="mt-2 space-y-2.5">
+            {MORE_POINTS.map((point) => (
+              <li key={point.title} className="text-sm leading-relaxed text-muted">
+                <span className="font-bold text-ink">{point.title}.</span> {point.body}
+              </li>
+            ))}
+          </ul>
+        </Card>
       </div>
 
       <section className="mt-8" aria-labelledby="everyday-signs-heading">
