@@ -1,19 +1,16 @@
 /// <reference types="node" />
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyMotion, motionCandidateShape, type MotionSample } from '../motionClassifier';
-import { CONFIDENCE_CAP, type HandFrame } from '../signClassifier';
+import { classifyMotion, createMotionTracker, motionCandidateShape, type MotionSample } from '../motionClassifier';
+import { type HandFrame } from '../signClassifier';
 
-// Geometric fixtures verify rule behavior, not real-world ASL accuracy —
-// same caveat as signClassifier's own tests. These have had no live-camera
-// validation, which is exactly why J/Z stay capped at the untested 0.5 tier
-// in signClassifier's CONFIDENCE_CAP table.
+// Synthetic trajectories verify geometry and lifecycle, not live ASL accuracy.
 
 /** A straight-down-then-rightward hook, in the shape of a traced "J". */
 function jPath(): MotionSample[] {
   const samples: MotionSample[] = [];
   for (let i = 0; i <= 4; i++) samples.push({ x: 0, y: i * 0.3, t: i * 60, scale: 1 });
-  for (let i = 1; i <= 4; i++) samples.push({ x: i * 0.3, y: 1.2, t: 240 + i * 60, scale: 1 });
+  for (let i = 1; i <= 4; i++) samples.push({ x: i * 0.3, y: 1.2 - i * 0.08, t: 240 + i * 60, scale: 1 });
   return samples;
 }
 
@@ -30,10 +27,10 @@ function staticJitter(): MotionSample[] {
   return Array.from({ length: 8 }, (_, i) => ({ x: 0.5 + (i % 2) * 0.01, y: 0.5, t: i * 60, scale: 1 }));
 }
 
-test('a traced J is recognized, capped at the untested confidence tier', () => {
+test('a traced J is recognized, with a geometric completion score', () => {
   const result = classifyMotion(jPath(), 'J');
   assert.equal(result?.label, 'J');
-  assert.ok(result && result.confidence > 0 && result.confidence <= CONFIDENCE_CAP.J);
+  assert.ok(result && result.confidence > 0 && result.confidence >= 0.8 && result.confidence <= 0.97);
 });
 
 test('a traced J survives horizontal mirroring and uniform scaling', () => {
@@ -43,10 +40,10 @@ test('a traced J survives horizontal mirroring and uniform scaling', () => {
   assert.equal(classifyMotion(scaled, 'J')?.label, 'J');
 });
 
-test('a traced Z is recognized, capped at the untested confidence tier', () => {
+test('a traced Z is recognized, with a geometric completion score', () => {
   const result = classifyMotion(zPath(), 'Z');
   assert.equal(result?.label, 'Z');
-  assert.ok(result && result.confidence > 0 && result.confidence <= CONFIDENCE_CAP.Z);
+  assert.ok(result && result.confidence > 0 && result.confidence >= 0.8 && result.confidence <= 0.97);
 });
 
 test('a traced Z survives horizontal mirroring and uniform scaling', () => {
@@ -138,4 +135,28 @@ test('uneven sample density and a brief pause do not change the gesture', () => 
 
 test('large depth/scale changes cannot masquerade as a traced sign', () => {
   assert.equal(classifyMotion(jPath().map((s, i) => ({...s, scale: i < 4 ? 1 : 3})), 'J'), null);
+});
+
+test('an incomplete J sweep or partial Z does not complete', () => {
+  assert.equal(classifyMotion(jPath().map(s=>({...s,y:Math.min(s.y, 1.0)})).slice(0,5), 'J'),null);
+  assert.equal(classifyMotion(zPath().slice(0,7),'Z'),null);
+  const sweep=jPath().map((s,i)=>({...s,y:i<=4?s.y:1.2}));
+  assert.equal(classifyMotion(sweep,'J'),null);
+});
+
+test('stream emits once, tolerates finger blur and requires release', () => {
+  const tracker=createMotionTracker();
+  function frame(sample:MotionSample, shape=true) {
+    const f=fakeFrame({straight:shape?[false,false,false,true]:[false,false,false,false]});
+    f.p=Array.from({length:21},()=>({x:sample.x,y:sample.y,z:0})); return f;
+  }
+  const origin={x:0,y:0,t:0,scale:1};
+  tracker.update(frame(origin),0);tracker.update(frame(origin),60);
+  let results=0;
+  jPath().forEach((s,i)=>{if(tracker.update(frame(s,i!==5),s.t+120))results++;});
+  assert.equal(results,1);
+  jPath().forEach(s=>{if(tracker.update(frame(s),s.t+660))results++;});
+  assert.equal(results,1);
+  tracker.reset();
+  assert.equal(tracker.update(null,2000),null);
 });

@@ -1,130 +1,101 @@
-// Trajectory-based recognition for motion signs (currently J and Z), built as
-// a small extensible template registry rather than one-off J/Z-specific glue,
-// so a future word sign can register its own scorer here without touching
-// the frame loop in useSignRecognition.ts.
-//
-// A motion sign is: hold a specific static handshape (motionCandidateShape
-// below decides which one, reusing computeHandFrame from signClassifier.ts)
-// while tracing a trajectory. useSignRecognition.ts buffers the tracked
-// fingertip's position each frame while the candidate handshape holds, and
-// calls classifyMotion() on that buffer.
-//
-// Like signClassifier.ts's rule-match scores, this is uncalibrated geometric
-// evidence, not a trained gesture model, and it has had NO live-camera
-// validation — J and Z's caps in signClassifier's CONFIDENCE_CAP table start
-// at the same untested 0.5 tier as any other never-tested letter. Promote
-// them the same way: test live, then raise their cap there.
 import type { SignResult } from '../lib/contracts';
 import type { HandFrame } from './signClassifier';
-import { CONFIDENCE_CAP, DEFAULT_CAP, ramp } from './signClassifier';
-
 export type MotionSample = { x: number; y: number; t: number; scale: number };
+export type MotionLetter = 'J' | 'Z';
 
-const MIN_SAMPLES = 5;
-const MIN_DURATION_MS = 200;
-const MAX_DURATION_MS = 1900;
-
-/** Which motion sign's starting handshape (if any) this frame matches. Reuses
- * the same finger-extension evidence classifySign uses for its own static 'I'
- * and ambiguous bare-index-point cases. */
-export function motionCandidateShape(frame: HandFrame): 'J' | 'Z' | null {
-  const [index, middle, ring, pinky] = frame.straight;
-  if (!index && !middle && !ring && pinky) return 'J'; // I handshape
-  if (index && !middle && !ring && !pinky && !frame.thumbOut && !frame.contact[1]) return 'Z'; // bare index point
+export function motionCandidateShape(f: HandFrame): MotionLetter | null {
+  const [i,m,r,p] = f.straight;
+  if (!i && !m && !r && p && !f.thumbOut) return 'J';
+  if (i && !m && !r && !p && !f.thumbOut && !f.contact[1]) return 'Z';
   return null;
 }
 
-/** Sample by distance travelled, not frame count: pauses and uneven signing
- * speeds must not move the apparent corners of a gesture. */
-function resamplePath(samples: readonly MotionSample[]): MotionSample[] {
-  const distances = [0];
-  for (let i = 1; i < samples.length; i++) {
-    distances.push(distances[i - 1] + Math.hypot(samples[i].x - samples[i - 1].x, samples[i].y - samples[i - 1].y));
+/** Remove tiny jitter in palm-length units. Stroke boundaries are searched,
+ * never assumed to occur at equal times or equal sample counts. */
+function path(samples: readonly MotionSample[]) {
+  const scale = samples.map(s=>s.scale).sort((a,b)=>a-b)[Math.floor(samples.length/2)];
+  const points = [{x:0,y:0}];
+  for (const s of samples.slice(1)) {
+    const p = {x:(s.x-samples[0].x)/scale, y:(s.y-samples[0].y)/scale};
+    const last = points[points.length-1];
+    if (Math.hypot(p.x-last.x,p.y-last.y) >= 0.055) points.push(p);
   }
-  const total = distances[distances.length - 1];
-  if (total === 0) return [...samples];
-  const result: MotionSample[] = [];
-  let segment = 1;
-  for (let i = 0; i <= 24; i++) {
-    const distance = total * i / 24;
-    while (segment < samples.length - 1 && distances[segment] < distance) segment++;
-    const a = samples[segment - 1], b = samples[segment];
-    const length = distances[segment] - distances[segment - 1];
-    const f = length > 0 ? (distance - distances[segment - 1]) / length : 0;
-    result.push({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f,
-      t: a.t + (b.t - a.t) * f, scale: a.scale + (b.scale - a.scale) * f });
+  // Bound the corner search even if this API is fed high-frequency samples.
+  return points.filter((_,i)=>i===points.length-1 || i % Math.max(1,Math.ceil(points.length/48))===0);
+}
+type Point = {x:number;y:number};
+function leg(p: Point[], a:number,b:number) {
+  const x=p[b].x-p[a].x,y=p[b].y-p[a].y, length=Math.hypot(x,y);
+  let travel=0;
+  for(let i=a+1;i<=b;i++) travel+=Math.hypot(p[i].x-p[i-1].x,p[i].y-p[i-1].y);
+  return {x,y,length, efficiency:travel ? length/travel : 0};
+}
+export function classifyMotion(samples: readonly MotionSample[], candidate:string):SignResult|null {
+  if ((candidate!=='J' && candidate!=='Z') || samples.length<5) return null;
+  if (!samples.every(s=>[s.x,s.y,s.t,s.scale].every(Number.isFinite)&&s.scale>0)) return null;
+  const duration=samples.at(-1)!.t-samples[0].t;
+  if(duration<200 || duration>3500) return null;
+  for(let i=1;i<samples.length;i++) if(samples[i].t<=samples[i-1].t || samples[i].t-samples[i-1].t>250) return null;
+  const scales=samples.map(s=>s.scale);
+  if(Math.max(...scales)/Math.min(...scales)>1.8) return null;
+  const p=path(samples), end=p.length-1;
+  let quality=0;
+  for(let a=1;a<end;a++) {
+    const first=leg(p,0,a);
+    if(candidate==='J') {
+      const hook=leg(p,a,end);
+      // Descend, then turn sideways and rise. An L-shaped sweep is incomplete.
+      if(first.y<0.45 || Math.abs(first.x)>first.y*0.65 || first.efficiency<0.8) continue;
+      if(Math.abs(hook.x)<0.22 || hook.y> -0.12 || hook.efficiency<0.6) continue;
+      quality=Math.max(quality,Math.min(first.efficiency,hook.efficiency));
+    } else {
+      if(Math.abs(first.x)<0.35 || Math.abs(first.y)>Math.abs(first.x)*0.35 || first.efficiency<0.8) continue;
+      for(let b=a+1;b<end;b++) {
+        const diagonal=leg(p,a,b),last=leg(p,b,end);
+        if(diagonal.y<0.3 || Math.abs(diagonal.x)<0.3 || diagonal.x*first.x>=0 || diagonal.efficiency<0.78) continue;
+        if(Math.abs(last.x)<0.35 || last.x*first.x<=0 || Math.abs(last.y)>Math.abs(last.x)*0.35 || last.efficiency<0.8) continue;
+        quality=Math.max(quality,Math.min(first.efficiency,diagonal.efficiency,last.efficiency));
+      }
+    }
   }
-  return result;
+  return quality ? {label:candidate, confidence:Math.min(0.97,0.6+quality*0.37)} : null;
 }
 
-function normalizedPath(samples: readonly MotionSample[]) {
-  const avgScale = samples.reduce((sum, s) => sum + s.scale, 0) / samples.length;
-  const x0 = samples[0].x, y0 = samples[0].y;
-  const nx = samples.map(s => (s.x - x0) / avgScale);
-  const ny = samples.map(s => (s.y - y0) / avgScale);
-  let pathLength = 0;
-  for (let i = 1; i < nx.length; i++) pathLength += Math.hypot(nx[i] - nx[i-1], ny[i] - ny[i-1]);
-  return { nx, ny, avgScale, pathLength };
-}
-
-function leg(nx: number[], ny: number[], from: number, to: number) {
-  const v = { x: nx[to] - nx[from], y: ny[to] - ny[from] };
-  return { ...v, len: Math.hypot(v.x, v.y) };
-}
-
-/** J: traced from the I handshape, roughly straight down then hooking —
- * direction-agnostic so it doesn't assume a right-handed signer or a
- * particular camera-mirroring convention. */
-function scoreJ(samples: readonly MotionSample[]): number {
-  const { nx, ny, pathLength } = normalizedPath(samples);
-  if (pathLength < 1.0) return 0; // not enough motion; let the static classifier own a held I/Y
-  const mid = Math.floor((nx.length - 1) / 2);
-  const first = leg(nx, ny, 0, mid);
-  const second = leg(nx, ny, mid, nx.length - 1);
-  if (first.len < 0.3 || second.len < 0.2) return 0;
-  if (Math.abs(first.y) <= Math.abs(first.x)) return 0; // first leg must be predominantly vertical, not diagonal
-  const downward = ramp(first.y / first.len, 0.3, 0.85);
-  const cos = (first.x*second.x + first.y*second.y) / (first.len*second.len);
-  const turnAngle = Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI;
-  const hooks = ramp(turnAngle, 30, 90); // a real turn, not a straight continuation or a shallow drift
-  return Math.min(downward, hooks);
-}
-
-/** Z: traced from a bare index point, a horizontal-diagonal-horizontal
- * zigzag. Checked as relative direction changes between legs (not an
- * absolute left/right), so it doesn't depend on which way the camera
- * happens to mirror the image. */
-function scoreZ(samples: readonly MotionSample[]): number {
-  const { nx, ny, pathLength } = normalizedPath(samples);
-  if (pathLength < 1.4) return 0;
-  const n = nx.length;
-  const t1 = Math.floor(n / 3), t2 = Math.floor((2 * n) / 3);
-  const legs = [leg(nx, ny, 0, t1), leg(nx, ny, t1, t2), leg(nx, ny, t2, n - 1)];
-  if (legs.some(l => l.len < 0.25)) return 0;
-  const horiz = legs.map(l => l.x / l.len);
-  const outerHoriz = Math.min(ramp(Math.abs(horiz[0]), 0.3, 0.85), ramp(Math.abs(horiz[2]), 0.3, 0.85));
-  const outerAgree = ramp(horiz[0] * horiz[2], 0.05, 0.4); // outer legs point the same way
-  const reversal = ramp(-(horiz[0] * horiz[1]), 0.05, 0.4); // middle leg reverses that direction
-  const vertical = ramp(legs[1].y / legs[1].len, 0.1, 0.7); // and drifts vertically, unlike the outer legs
-  return Math.min(outerHoriz, outerAgree, reversal, vertical);
-}
-
-const TEMPLATES: Record<string, (samples: readonly MotionSample[]) => number> = { J: scoreJ, Z: scoreZ };
-
-export function classifyMotion(samples: readonly MotionSample[], candidate: string): SignResult | null {
-  const scorer = TEMPLATES[candidate];
-  if (!scorer || samples.length < MIN_SAMPLES) return null;
-  const duration = samples[samples.length - 1].t - samples[0].t;
-  if (duration < MIN_DURATION_MS || duration > MAX_DURATION_MS) return null;
-  if (!samples.every(s => [s.x, s.y, s.t, s.scale].every(Number.isFinite) && s.scale > 0)) return null;
-  for (let i = 1; i < samples.length; i++) {
-    const gap = samples[i].t - samples[i - 1].t;
-    if (gap <= 0 || gap > 250) return null;
-  }
-  const scales = samples.map(s => s.scale);
-  if (Math.max(...scales) / Math.min(...scales) > 1.8) return null;
-  const evidence = scorer(resamplePath(samples));
-  if (evidence <= 0) return null;
-  const cap = CONFIDENCE_CAP[candidate] ?? DEFAULT_CAP;
-  return { label: candidate, confidence: Math.min(cap, 0.45 + 0.53 * evidence) };
+/** Seed with a stable pose, then tolerate finger flexion during rotation.
+ * Completion is a single event. A release is required before rearming. */
+export function createMotionTracker() {
+  let candidate:MotionLetter|null=null, seed:MotionLetter|null=null, seedCount=0;
+  let samples:MotionSample[]=[], lastTime=-Infinity, missingSince:number|null=null;
+  let locked=false;
+  const reset=()=>{candidate=null;seed=null;seedCount=0;samples=[];lastTime=-Infinity;missingSince=null;locked=false;};
+  return { reset, update(frame:HandFrame|null, now:number):SignResult|null {
+    if(!Number.isFinite(now)) { reset();return null; }
+    if(now<=lastTime || now-lastTime>250) reset();
+    lastTime=now;
+    const shape=frame ? motionCandidateShape(frame):null;
+    if(!shape) { missingSince ??=now; } else { missingSince=null; }
+    if(locked) {
+      if(missingSince!==null && now-missingSince>=300) reset();
+      return null;
+    }
+    if(!candidate) {
+      if(!shape || !frame) { seed=null;seedCount=0;return null; }
+      if(shape!==seed) {seed=shape;seedCount=0;}
+      if(++seedCount<3) return null;
+      candidate=shape;samples=[];
+    }
+    if(!frame || (shape && shape!==candidate) || (missingSince!==null && now-missingSince>400)) {
+      candidate=null;samples=[];seedCount=0;return null;
+    }
+    const tip=frame.p[candidate==='J'?20:8];
+    if(!tip || !Number.isFinite(frame.scale) || frame.scale<=0) { reset();return null; }
+    const sample={x:tip.x,y:tip.y,t:now,scale:frame.scale};
+    if(samples.length && now-samples[0].t>3500) samples=[];
+    // Drop stationary lead-in so waiting to begin doesn't consume the window.
+    if(samples.length===1 && Math.hypot(sample.x-samples[0].x,sample.y-samples[0].y)<sample.scale*0.055) samples=[];
+    samples.push(sample);
+    const result=classifyMotion(samples,candidate);
+    if(result) {locked=true;samples=[];}
+    return result;
+  }};
 }

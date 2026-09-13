@@ -87,23 +87,16 @@ The letter/number vocabulary separates overlapping shapes (for example V versus 
 The desired target never forces the classifier's answer. The thumb and occlusion
 rules for A/E/M/N/S/T in particular need real-camera calibration or a trained classifier.
 
-J and Z now have a real (but equally untested) recognition path: `motionClassifier.ts`
-buffers the tracked fingertip's position while the hand holds a motion-candidate
-handshape (`motionCandidateShape()` — the I shape for J, a bare index point for Z),
-then scores the resulting trajectory against a small geometric template for each
-letter (a downward hook for J, a horizontal-diagonal-horizontal zigzag for Z),
-direction-agnostic so it doesn't assume a particular handedness or camera-mirroring
-convention. `useSignRecognition.ts` latches a detected gesture as `current` for
-~1.3s so the existing hold-to-confirm tracker — built for a held pose, not a
-momentary motion — gets a real window to confirm it; `holdTracker.ts` itself is
-unchanged. J and Z share signClassifier's `CONFIDENCE_CAP` table and start at the
-same untested 0.5 tier as any other never-live-tested letter — promote them the
-same one-line way, after testing on a real camera. Word signs, including THANK YOU,
-exist in the mock only; full-word recognition is not implemented.
-
-No WLASL or other external training dataset has been adopted. Test fixtures are
-synthetic coordinates and establish behavior, not ASL correctness. Validate signs
-with an ASL-fluent person and test different signers, lighting and handedness.
+J/Z use an opt-in stroke detector (`experimentalMotion: true`). A stable seed
+pose starts tracking, then temporary finger flexion is tolerated. Corner searches
+check a downward-and-rising hook for J or horizontal/down-diagonal/horizontal
+strokes for Z. Paths may take 200–3500 ms. Small jitter is removed in palm-size
+units; broken tracking, invalid samples and large scale jumps are rejected.
+A completed gesture confirms directly once if its target and score match. It is
+not replayed through the static one-second hold. Release before repeating.
+The lab enables this option; production lessons must opt in explicitly. The
+motion score is geometric evidence, not calibrated accuracy or the static cap.
+These changes need live-camera validation before wider lesson rollout.
 
 ## Gemini coaching and D's backend
 
@@ -154,17 +147,5 @@ if your terminal says `npm: command not found`, install a current Node LTS runti
 References: [MediaPipe web guide](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/web_js),
 [ASL fingerspelling reference](https://www.lifeprint.com/asl101/pages-layout/fingerspelling.htm).
 
-## Motion robustness update
-
-J/Z paths are resampled by distance travelled rather than frame count, so uneven
-signing speed and brief pauses do not shift the apparent stroke boundaries.
-Z requires a downward middle stroke; horizontal mirroring is still supported.
-Nonfinite samples, non-increasing timestamps, gaps over 250 ms, and scale changes
-over 1.8× are rejected. Candidate poses retain the local 250 ms jitter tolerance
-and two-second buffer. The gesture duration limit is 1900 ms. A latched gesture
-is cleared when the hand disappears, and its trajectory is discarded when the
-latch ends so the old motion cannot be reused.
-
-The suite now has 28 tests. J/Z remain capped at 0.5 pending live validation;
-use the recognition lab's experimental targets to inspect predictions. Verify
-both hands, slow/fast traces, ordinary waving, and release/repeat before promotion.
+Motion rewrite validation: 30 tests total, including partial-path rejection,
+uneven timing, mirror/scale invariance and one-shot streaming completion.

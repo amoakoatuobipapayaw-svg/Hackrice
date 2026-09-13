@@ -31,5 +31,14 @@ export function useRecognitionState(options: RecognitionOptions) {
       optionsRef.current.onConfirm?.(next.confirmed);
     }
   }, []);
-  return { current, holdProgress, confirmed, correctReps, reset, clearHold, accept, optionsRef };
+  const acceptMotion = useCallback((result: SignResult) => {
+    tracker.current.reset();
+    setCurrent(result); setHoldProgress(0);
+    const settings = optionsRef.current;
+    if (!settings.experimentalMotion || (settings.target && result.label !== settings.target)
+      || result.confidence < (settings.minConfidence ?? 0.8)) return;
+    setHoldProgress(1); setConfirmed(result); setCorrectReps(count => count + 1);
+    settings.onConfirm?.(result);
+  }, []);
+  return { acceptMotion, current, holdProgress, confirmed, correctReps, reset, clearHold, accept, optionsRef };
 }

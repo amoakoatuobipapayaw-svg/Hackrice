@@ -11,6 +11,8 @@ export type RecognitionOptions = {
   onConfirm?: (result: SignResult) => void;
   /** Landmark summaries leave the browser only when coaching is explicitly enabled. */
   coaching?: boolean;
+  /** Opt-in J/Z stroke scoring; experimental and not calibrated ASL accuracy. */
+  experimentalMotion?: boolean;
 };
 export interface Recognition extends SignRecognition {
   videoRef: RefObject<HTMLVideoElement | null>;
