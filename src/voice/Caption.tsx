@@ -4,7 +4,7 @@
 // they render a <useVoice() /> consumer.
 import type { VoiceAccessibility } from "./useVoice";
 
-type CaptionProps = VoiceAccessibility & {
+type CaptionProps = Pick<VoiceAccessibility, "caption" | "isListening" | "isTranscribing"> & {
   isSpeaking: boolean;
 };
 
