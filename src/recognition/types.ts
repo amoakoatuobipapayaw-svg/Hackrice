@@ -13,6 +13,9 @@ export type RecognitionOptions = {
   coaching?: boolean;
   /** Opt-in J/Z stroke scoring; experimental and not calibrated ASL accuracy. */
   experimentalMotion?: boolean;
+  /** Force pure-heuristic J/Z scoring, skipping the trained model even if it
+   * loaded. An escape hatch if the model misbehaves under demo conditions. */
+  disableMotionML?: boolean;
 };
 export interface Recognition extends SignRecognition {
   videoRef: RefObject<HTMLVideoElement | null>;

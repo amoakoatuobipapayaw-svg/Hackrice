@@ -98,6 +98,45 @@ The lab enables this option; production lessons must opt in explicitly. The
 motion score is geometric evidence, not calibrated accuracy or the static cap.
 These changes need live-camera validation before wider lesson rollout.
 
+### J/Z: a trained model layered on top of the heuristic
+
+`useSignRecognition` also loads a small trained model (`motionModel.ts`) alongside
+MediaPipe at `start()` and tries it first for J/Z; the geometric heuristic above
+(`classifyMotion`) is the automatic fallback whenever the model hasn't loaded,
+errors, or doesn't clear its own confidence floor — nothing about the heuristic
+changed, and `createMotionTracker().update()` still works exactly as before if
+no model is passed in (its 3rd argument is optional). Pass
+`disableMotionML: true` to force pure-heuristic scoring if the model ever needs
+to be ruled out under demo pressure.
+
+The model is a tiny 1D-CNN trained entirely on **synthetic** trajectories
+(`src/recognition/ml/generateDataset.mjs` procedurally generates thousands of
+randomized candidate strokes and labels them by running them through the
+existing `classifyMotion` heuristic — the heuristic acts as the ground-truth
+labeler, so the model can only learn a smoother generalization of a decision
+boundary the team already validated, never something worse). No hand-collected
+webcam data was used. `src/recognition/ml/train.mjs` trains the model with
+`@tensorflow/tfjs-node` and re-validates it against `tests/motion.test.ts`'s
+hand-written `jPath()`/`zPath()`/`staticJitter()` fixtures before saving.
+
+To regenerate the dataset and retrain:
+```bash
+node src/recognition/ml/generateDataset.mjs
+node src/recognition/ml/train.mjs
+```
+This overwrites `public/models/motion-model/model.json` + `weights.bin` (committed,
+~16 KB total) — the browser loads that path directly with `tf.loadLayersModel()`,
+and `@tensorflow/tfjs` itself is loaded from jsDelivr at runtime (`motionModel.ts`),
+the same pattern `handLandmarker.ts` uses for MediaPipe. `@tensorflow/tfjs-node` is
+a devDependency used only by the two scripts above — it is never bundled.
+
+**Still experimental, same as the heuristic it sits on top of**: this has been
+validated against synthetic trajectories and the hand-written fixtures, not a
+real webcam. Live-camera testing (per the recognition handoff notes) decides
+whether J/Z actually belong in the demo-safe letter list — promoting them there
+follows the same one-line pattern as any other letter (see `signClassifier.ts`'s
+`CONFIDENCE_CAP` comment), and isn't done here.
+
 ## Gemini coaching and D's backend
 
 `geminiCoach(summary, signal?)` preserves the existing contract:
@@ -118,10 +157,13 @@ server-side. There is no browser Gemini key. Live Gemini output is not yet verif
 
 MediaPipe is loaded from jsDelivr's pinned `@mediapipe/tasks-vision@0.10.32` browser
 module with matching WASM; the model comes from Google's MediaPipe model storage.
-Internet access is needed on first use. A deployment's CSP must allow these hosts.
-No root package or lockfile change is required for this browser-loader approach.
-Inference is throttled to about 15 fps on the main thread; a worker is a future
-performance improvement if testing shows UI stalls.
+`@tensorflow/tfjs@4.22.0` is loaded the same way (jsDelivr's `+esm` build) for the
+J/Z motion model's inference. Internet access is needed on first use. A
+deployment's CSP must allow these hosts. No root package or lockfile change is
+required for either browser-loader approach — `@tensorflow/tfjs-node` is a
+devDependency for the offline training scripts only (see above), never shipped
+to the browser. Inference is throttled to about 15 fps on the main thread; a
+worker is a future performance improvement if testing shows UI stalls.
 
 ```bash
 node src/recognition/tests/run.mjs
@@ -136,7 +178,11 @@ video aspect ratio, invalid landmarks, varying contact scores, rejection of
 near-miss reps and the coaching API contract (13 tests in `core.test.ts`), plus
 J/Z trajectory recognition, mirror/scale invariance, J-vs-Z disambiguation, static
 holds never registering as motion, and motion-candidate handshape gating
-(11 tests in `motion.test.ts`) — 24 total.
+(17 tests in `motion.test.ts`), plus the ML feature extractor's normalization,
+the ML/heuristic dispatch gate, and — if `ml/train.mjs` has produced a model
+artifact — the trained model against the exact `jPath()`/`zPath()`/`staticJitter()`
+fixtures above (4 tests in `motionModel.test.ts`, the last one skipping quietly
+without an artifact or `@tensorflow/tfjs-node`) — 34 total.
 
 Setup note for D: with npm 12, the incoming lockfile failed `npm ci` because two
 `@emnapi` entries were missing. This session used `npm install --package-lock=false`

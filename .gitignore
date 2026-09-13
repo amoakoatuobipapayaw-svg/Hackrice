@@ -15,6 +15,9 @@ dist-ssr
 # Hackathon handbook / non-code docs — not part of the app
 *.docx
 
+# Regenerated deterministically by generateDataset.mjs (~11 MB, no need to commit)
+src/recognition/ml/data/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

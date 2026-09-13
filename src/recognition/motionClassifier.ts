@@ -61,6 +61,12 @@ export function classifyMotion(samples: readonly MotionSample[], candidate:strin
   return quality ? {label:candidate, confidence:Math.min(0.97,0.6+quality*0.37)} : null;
 }
 
+/** An optional trained scorer, tried before the geometric heuristic below.
+ * Injected rather than imported so this file stays free of any dependency
+ * on the ML model/loader — a caller with no model (or a load failure) simply
+ * never passes one, and every gesture is scored exactly as it always was. */
+export type MotionScorer = (samples: readonly MotionSample[], candidate: MotionLetter) => SignResult | null;
+
 /** Seed with a stable pose, then tolerate finger flexion during rotation.
  * Completion is a single event. A release is required before rearming. */
 export function createMotionTracker() {
@@ -68,7 +74,7 @@ export function createMotionTracker() {
   let samples:MotionSample[]=[], lastTime=-Infinity, missingSince:number|null=null;
   let locked=false;
   const reset=()=>{candidate=null;seed=null;seedCount=0;samples=[];lastTime=-Infinity;missingSince=null;locked=false;};
-  return { reset, update(frame:HandFrame|null, now:number):SignResult|null {
+  return { reset, update(frame:HandFrame|null, now:number, score?:MotionScorer):SignResult|null {
     if(!Number.isFinite(now)) { reset();return null; }
     if(now<=lastTime || now-lastTime>250) reset();
     lastTime=now;
@@ -94,7 +100,7 @@ export function createMotionTracker() {
     // Drop stationary lead-in so waiting to begin doesn't consume the window.
     if(samples.length===1 && Math.hypot(sample.x-samples[0].x,sample.y-samples[0].y)<sample.scale*0.055) samples=[];
     samples.push(sample);
-    const result=classifyMotion(samples,candidate);
+    const result=score?.(samples,candidate) ?? classifyMotion(samples,candidate);
     if(result) {locked=true;samples=[];}
     return result;
   }};

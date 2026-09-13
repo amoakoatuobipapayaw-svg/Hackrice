@@ -3,6 +3,9 @@ import type { HandLandmarker } from './handLandmarker';
 import { loadHandLandmarker, drawLandmarks } from './handLandmarker';
 import { classifySign, computeHandFrame } from './signClassifier';
 import { createMotionTracker } from './motionClassifier';
+import type { MotionScorer } from './motionClassifier';
+import { loadMotionModel, classifyMotionML } from './motionModel';
+import type { MotionModel } from './motionModel';
 import { geminiCoach } from './geminiCoach';
 import { useRecognitionState } from './useRecognitionState';
 import type { Recognition, RecognitionOptions } from './types';
@@ -21,6 +24,7 @@ export function useSignRecognition(options: RecognitionOptions = {}): Recognitio
   const active = useRef(false);
   const stream = useRef<MediaStream|null>(null);
   const model = useRef<HandLandmarker|null>(null);
+  const motionModel = useRef<MotionModel|null>(null);
   const frame = useRef(0);
   const coach = useRef<AbortController|null>(null);
   const startupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -33,7 +37,7 @@ export function useSignRecognition(options: RecognitionOptions = {}): Recognitio
     coach.current?.abort(); coach.current = null;
     resetMotion();
     stream.current?.getTracks().forEach(track => { track.onended = null; track.stop(); });
-    stream.current = null; model.current?.close(); model.current = null;
+    stream.current = null; model.current?.close(); model.current = null; motionModel.current = null;
     if (videoRef.current) { videoRef.current.pause(); videoRef.current.srcObject = null; }
     const canvas = canvasRef.current;
     canvas?.getContext('2d')?.clearRect(0,0,canvas.width,canvas.height);
@@ -65,9 +69,16 @@ export function useSignRecognition(options: RecognitionOptions = {}): Recognitio
         camera.getVideoTracks().forEach(track => { track.onended = () => fail(new Error('Camera disconnected. Press Start to retry.')); });
         await video.play();
         if (!alive()) return;
-        const detector = await loadHandLandmarker();
+        // The motion model is a best-effort upgrade: a slow network or CDN
+        // hiccup must not block the golden demo loop, so its failure is
+        // swallowed here and the geometric heuristic simply takes over.
+        const [detector, mlModel] = await Promise.all([
+          loadHandLandmarker(),
+          loadMotionModel().catch(() => null),
+        ]);
         if (!alive()) { detector.close(); return; }
         model.current = detector;
+        motionModel.current = mlModel;
         if (startupTimer.current) clearTimeout(startupTimer.current);
         startupTimer.current = null; setStatus('running');
         let lastVideoTime = -1, lastInference = -Infinity, lastCoach = -Infinity;
@@ -80,8 +91,10 @@ export function useSignRecognition(options: RecognitionOptions = {}): Recognitio
               const settings = optionsRef.current;
               const aspectRatio = video.videoWidth/video.videoHeight;
               let current: SignResult | null = points ? classifySign(points, { vocabulary:settings.vocabulary, aspectRatio }) : null;
+              const motionScorer: MotionScorer | undefined = !settings.disableMotionML && motionModel.current
+                ? (samples, candidate) => classifyMotionML(motionModel.current, samples, candidate) : undefined;
               const motionResult = settings.experimentalMotion && (settings.vocabulary ?? 'letters') === 'letters'
-                ? motion.current.update(points ? computeHandFrame(points, aspectRatio) : null, now) : null;
+                ? motion.current.update(points ? computeHandFrame(points, aspectRatio) : null, now, motionScorer) : null;
               if (motionResult) {
                 current = motionResult;
                 acceptMotion(motionResult);
