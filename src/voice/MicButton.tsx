@@ -30,8 +30,12 @@ export function MicButton({ isListening, isTranscribing, startListening, stopLis
     try {
       const transcript = await stopListening();
       onResult(transcript);
-    } catch {
-      setError("Couldn't reach the mic — check permission and try again.");
+    } catch (err) {
+      // Surface the real browser error (permission denied vs. no mic found
+      // vs. something else) instead of one generic message — this is the
+      // difference between "try again" actually being possible or not.
+      const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      setError(`Couldn't use the mic (${detail}).`);
     }
   }
 
