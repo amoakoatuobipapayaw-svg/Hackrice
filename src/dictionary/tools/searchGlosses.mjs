@@ -6,7 +6,7 @@
 // node src/dictionary/tools/searchGlosses.mjs
 import { openAslCitizenZip } from './aslCitizenReader.mjs';
 
-const SUBSTRINGS = ['THANK', 'WHAT', 'HELLO'];
+const SUBSTRINGS = ['BYE', 'SHE', 'FOOD', 'SPEAK', 'SAY'];
 
 const { zipfile } = await openAslCitizenZip();
 const ENTRY_RE = /^ASL_Citizen\/videos\/([^/]+)-([A-Z0-9 .'-]+)\.mp4$/;

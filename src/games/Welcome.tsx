@@ -11,12 +11,25 @@ import { getLocalProfile } from "../lib/localProfile";
 import { SignPhrase } from "./SignPhrase";
 import { markWelcomeSeen } from "./welcomeProgress";
 
+type Tone = "brand" | "accent" | "success";
+const TONES: readonly Tone[] = ["brand", "accent", "success"];
+const NUMBER_BADGE: Record<Tone, string> = {
+  brand: "bg-brand text-white",
+  accent: "bg-accent text-accent-ink",
+  success: "bg-success text-white",
+};
+const CARD_ACCENT: Record<Tone, string> = {
+  brand: "border-l-brand",
+  accent: "border-l-accent",
+  success: "border-l-success",
+};
+
 const GRAMMAR_POINTS = [
-  { icon: "🧩", title: "Its own grammar", body: "ASL isn't English signed word for word. It has its own grammar and word order, built for a visual, spatial language rather than a spoken one." },
-  { icon: "🙂", title: "Facial expression carries meaning", body: "Eyebrows, mouth shape, and eye gaze aren't just emotion — they can mark a question, describe intensity, or change a sign's meaning entirely." },
-  { icon: "🧍", title: "Body position matters", body: "Leaning, shoulder shifts, and where you position yourself can show whose turn it is to \"speak\" in a conversation, or represent a different person or thing." },
-  { icon: "🗺️", title: "Space is grammar too", body: "Signers place people, places, and ideas at points in the space around them, then point back to those points later — space stands in for pronouns and location." },
-  { icon: "〜", title: "Movement changes meaning", body: "The letters J and Z in this course are one small example: the same starting handshape, a different path traced through the air, a different letter." },
+  { title: "Its own grammar", body: "ASL isn't English signed word for word. It has its own grammar and word order, built for a visual, spatial language rather than a spoken one." },
+  { title: "Facial expression carries meaning", body: "Eyebrows, mouth shape, and eye gaze aren't just emotion — they can mark a question, describe intensity, or change a sign's meaning entirely." },
+  { title: "Body position matters", body: "Leaning, shoulder shifts, and where you position yourself can show whose turn it is to \"speak\" in a conversation, or represent a different person or thing." },
+  { title: "Space is grammar too", body: "Signers place people, places, and ideas at points in the space around them, then point back to those points later — space stands in for pronouns and location." },
+  { title: "Movement changes meaning", body: "The letters J and Z in this course are one small example: the same starting handshape, a different path traced through the air, a different letter." },
 ];
 
 const EVERYDAY_SIGNS = [
@@ -41,16 +54,19 @@ export function Welcome() {
       progress={0}
       progressLabel="A short read, no camera needed"
     >
-      <div className="space-y-4">
-        {GRAMMAR_POINTS.map((point) => (
-          <Card key={point.title} className="flex gap-4 p-5">
-            <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-soft text-xl text-brand">{point.icon}</span>
-            <div>
-              <h2 className="text-sm font-bold text-brand">{point.title}</h2>
-              <p className="mt-1 text-sm leading-relaxed text-muted">{point.body}</p>
-            </div>
-          </Card>
-        ))}
+      <div className="space-y-3">
+        {GRAMMAR_POINTS.map((point, i) => {
+          const tone = TONES[i % TONES.length];
+          return (
+            <Card key={point.title} className={`flex gap-4 border-l-4 p-5 ${CARD_ACCENT[tone]}`}>
+              <span aria-hidden="true" className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black ${NUMBER_BADGE[tone]}`}>{i + 1}</span>
+              <div>
+                <h2 className="text-sm font-bold text-ink">{point.title}</h2>
+                <p className="mt-1 text-sm leading-relaxed text-muted">{point.body}</p>
+              </div>
+            </Card>
+          );
+        })}
       </div>
 
       <section className="mt-8" aria-labelledby="everyday-signs-heading">
@@ -60,13 +76,13 @@ export function Welcome() {
           <a href="https://asl-lex.org/about.html" target="_blank" rel="noreferrer" className="font-semibold text-selected-ink underline underline-offset-2">ASL-LEX</a>{" "}
           catalog — real signs rated by fluent Deaf signers for how often they come up in everyday use. This preview isn't pulled from that dataset's numbers, but it's the kind of everyday vocabulary it points to.
         </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
           {EVERYDAY_SIGNS.map(({ sign, note }) => (
-            <div key={sign} className="rounded-2xl border border-line bg-surface p-4">
-              <p className="text-sm font-extrabold tracking-wide text-brand">{sign}</p>
-              <p className="mt-1 text-sm leading-relaxed text-muted">{note}</p>
-              <div className="mt-3"><SignPhrase text={sign} /></div>
-            </div>
+            <Card key={sign} className="p-4">
+              <span className="inline-block rounded-md bg-brand-soft px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-brand uppercase">{sign}</span>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{note}</p>
+              <div className="mt-3 border-t border-line pt-3"><SignPhrase text={sign} /></div>
+            </Card>
           ))}
         </div>
         <p className="mt-3 text-xs text-muted">

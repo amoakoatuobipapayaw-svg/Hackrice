@@ -15,11 +15,27 @@ import { openAslCitizenZip } from './aslCitizenReader.mjs';
 // free-text phrase lookup less sparse. Real hits/misses reported below —
 // nothing here is assumed to exist in the dataset.
 const TARGET_WORDS = [
-  'HELLO', 'THANK YOU', 'PLEASE', 'SORRY',
-  'MY', 'NAME', 'NICE', 'MEET', 'YOU', 'ME',
-  'FRIEND', 'YES', 'NO', 'GOOD', 'BAD', 'HELP', 'WANT', 'LIKE', 'LOVE',
-  'WHAT', 'HOW', 'WHERE', 'WHO', 'WHY', 'FINE', 'HAPPY', 'SAD',
-  'SEE', 'UNDERSTAND', 'KNOW', 'LEARN', 'SIGN', 'DEAF', 'HEARING',
+  // Greetings / introductions
+  'HELLO', 'THANK YOU', 'PLEASE', 'SORRY', 'BYE', 'MORNING', 'NIGHT',
+  'MY', 'NAME', 'NICE', 'MEET', 'YOU', 'ME', 'WE', 'THEY', 'HE', 'IT',
+  'FRIEND', 'FAMILY', 'MOTHER', 'FATHER', 'BROTHER', 'SISTER', 'CHILD', 'MAN', 'WOMAN',
+  // Yes/no, feelings, common adjectives
+  'YES', 'NO', 'GOOD', 'BAD', 'FINE', 'HAPPY', 'SAD', 'TIRED', 'SICK', 'HUNGRY',
+  'BIG', 'SMALL', 'HOT', 'COLD', 'NEW', 'OLD', 'FAST', 'SLOW', 'EASY', 'HARD',
+  'MORE', 'SAME', 'DIFFERENT', 'RIGHT', 'WRONG',
+  // Question words
+  'WHAT', 'HOW', 'WHERE', 'WHO', 'WHY', 'WHEN', 'WHICH',
+  // Common verbs
+  'HELP', 'WANT', 'LIKE', 'LOVE', 'NEED', 'HAVE', 'GO', 'COME', 'STOP', 'WAIT',
+  'SEE', 'WATCH', 'LISTEN', 'TALK', 'ASK', 'ANSWER',
+  'UNDERSTAND', 'KNOW', 'LEARN', 'TEACH', 'READ', 'WRITE', 'REMEMBER',
+  'THINK', 'FEEL', 'WORK', 'PLAY', 'EAT', 'DRINK', 'SLEEP', 'MAKE', 'GET', 'GIVE', 'TAKE',
+  'CAN', 'WILL', 'TRY', 'START', 'FINISH',
+  // Everyday nouns / places / time
+  'SIGN', 'DEAF', 'HEARING', 'HOME', 'SCHOOL', 'DAY', 'WEEK', 'YEAR',
+  'TODAY', 'TOMORROW', 'YESTERDAY', 'NOW', 'LATER', 'TIME', 'WATER', 'MONEY',
+  // Colors
+  'RED', 'BLUE', 'GREEN', 'YELLOW', 'BLACK', 'WHITE', 'ORANGE', 'PURPLE', 'BROWN',
 ];
 
 /** Some glosses only exist as numbered dialect/homonym variants (e.g. no

@@ -3,13 +3,29 @@
     "file": "videos/me.mp4",
     "bytes": 252131
   },
+  "HAVE": {
+    "file": "videos/have.mp4",
+    "bytes": 241037
+  },
   "PLEASE": {
     "file": "videos/please.mp4",
     "bytes": 164937
   },
+  "NIGHT": {
+    "file": "videos/night.mp4",
+    "bytes": 292668
+  },
+  "SISTER": {
+    "file": "videos/sister.mp4",
+    "bytes": 297697
+  },
   "MEET": {
     "file": "videos/meet.mp4",
     "bytes": 251177
+  },
+  "READ": {
+    "file": "videos/read.mp4",
+    "bytes": 315227
   },
   "BAD": {
     "file": "videos/bad.mp4",
@@ -23,21 +39,145 @@
     "file": "videos/sorry.mp4",
     "bytes": 283053
   },
+  "GREEN": {
+    "file": "videos/green.mp4",
+    "bytes": 273080
+  },
+  "START": {
+    "file": "videos/start.mp4",
+    "bytes": 298441
+  },
+  "GET": {
+    "file": "videos/get.mp4",
+    "bytes": 229331
+  },
+  "LATER": {
+    "file": "videos/later.mp4",
+    "bytes": 224818
+  },
+  "WATER": {
+    "file": "videos/water.mp4",
+    "bytes": 255175
+  },
+  "MAKE": {
+    "file": "videos/make.mp4",
+    "bytes": 282066
+  },
+  "NEED": {
+    "file": "videos/need.mp4",
+    "bytes": 198169
+  },
+  "HOME": {
+    "file": "videos/home.mp4",
+    "bytes": 177404
+  },
   "WHY": {
     "file": "videos/why.mp4",
     "bytes": 239842
+  },
+  "WEEK": {
+    "file": "videos/week.mp4",
+    "bytes": 267730
+  },
+  "WRITE": {
+    "file": "videos/write.mp4",
+    "bytes": 174276
   },
   "FINE": {
     "file": "videos/fine.mp4",
     "bytes": 151418
   },
+  "EASY": {
+    "file": "videos/easy.mp4",
+    "bytes": 249990
+  },
+  "HE": {
+    "file": "videos/he.mp4",
+    "bytes": 102032
+  },
+  "EAT": {
+    "file": "videos/eat.mp4",
+    "bytes": 215607
+  },
+  "YEAR": {
+    "file": "videos/year.mp4",
+    "bytes": 238488
+  },
+  "GIVE": {
+    "file": "videos/give.mp4",
+    "bytes": 286878
+  },
+  "DIFFERENT": {
+    "file": "videos/different.mp4",
+    "bytes": 269542
+  },
+  "CAN": {
+    "file": "videos/can.mp4",
+    "bytes": 240879
+  },
+  "TALK": {
+    "file": "videos/talk.mp4",
+    "bytes": 226641
+  },
+  "PLAY": {
+    "file": "videos/play.mp4",
+    "bytes": 289159
+  },
+  "TIRED": {
+    "file": "videos/tired.mp4",
+    "bytes": 259287
+  },
+  "THEY": {
+    "file": "videos/they.mp4",
+    "bytes": 219634
+  },
+  "HUNGRY": {
+    "file": "videos/hungry.mp4",
+    "bytes": 214844
+  },
+  "BROWN": {
+    "file": "videos/brown.mp4",
+    "bytes": 229049
+  },
   "GOOD": {
     "file": "videos/good.mp4",
     "bytes": 192287
   },
+  "ORANGE": {
+    "file": "videos/orange.mp4",
+    "bytes": 137886
+  },
+  "DAY": {
+    "file": "videos/day.mp4",
+    "bytes": 354449
+  },
+  "WATCH": {
+    "file": "videos/watch.mp4",
+    "bytes": 197875
+  },
+  "MORNING": {
+    "file": "videos/morning.mp4",
+    "bytes": 335482
+  },
+  "SLEEP": {
+    "file": "videos/sleep.mp4",
+    "bytes": 226211
+  },
+  "LISTEN": {
+    "file": "videos/listen.mp4",
+    "bytes": 213516
+  },
   "FRIEND": {
     "file": "videos/friend.mp4",
     "bytes": 240293
+  },
+  "MOTHER": {
+    "file": "videos/mother.mp4",
+    "bytes": 215344
+  },
+  "WHITE": {
+    "file": "videos/white.mp4",
+    "bytes": 156098
   },
   "WANT": {
     "file": "videos/want.mp4",
@@ -51,13 +191,45 @@
     "file": "videos/you.mp4",
     "bytes": 160824
   },
+  "BIG": {
+    "file": "videos/big.mp4",
+    "bytes": 259426
+  },
   "SEE": {
     "file": "videos/see.mp4",
     "bytes": 136464
   },
+  "TAKE": {
+    "file": "videos/take.mp4",
+    "bytes": 286009
+  },
+  "WOMAN": {
+    "file": "videos/woman.mp4",
+    "bytes": 153710
+  },
+  "BYE": {
+    "file": "videos/bye.mp4",
+    "bytes": 163939
+  },
+  "GO": {
+    "file": "videos/go.mp4",
+    "bytes": 256079
+  },
+  "ASK": {
+    "file": "videos/ask.mp4",
+    "bytes": 217683
+  },
+  "OLD": {
+    "file": "videos/old.mp4",
+    "bytes": 217717
+  },
   "UNDERSTAND": {
     "file": "videos/understand.mp4",
     "bytes": 250327
+  },
+  "MAN": {
+    "file": "videos/man.mp4",
+    "bytes": 292320
   },
   "DEAF": {
     "file": "videos/deaf.mp4",
@@ -67,6 +239,34 @@
     "file": "videos/how.mp4",
     "bytes": 223438
   },
+  "YESTERDAY": {
+    "file": "videos/yesterday.mp4",
+    "bytes": 168050
+  },
+  "NEW": {
+    "file": "videos/new.mp4",
+    "bytes": 284891
+  },
+  "CHILD": {
+    "file": "videos/child.mp4",
+    "bytes": 255380
+  },
+  "WHEN": {
+    "file": "videos/when.mp4",
+    "bytes": 277756
+  },
+  "RIGHT": {
+    "file": "videos/right.mp4",
+    "bytes": 255488
+  },
+  "SLOW": {
+    "file": "videos/slow.mp4",
+    "bytes": 345443
+  },
+  "TEACH": {
+    "file": "videos/teach.mp4",
+    "bytes": 308426
+  },
   "THANK YOU": {
     "file": "videos/thank-you.mp4",
     "bytes": 224123
@@ -75,13 +275,57 @@
     "file": "videos/nice.mp4",
     "bytes": 303400
   },
+  "BLUE": {
+    "file": "videos/blue.mp4",
+    "bytes": 123721
+  },
+  "WHICH": {
+    "file": "videos/which.mp4",
+    "bytes": 293653
+  },
   "MY": {
     "file": "videos/my.mp4",
     "bytes": 242962
   },
+  "WILL": {
+    "file": "videos/will.mp4",
+    "bytes": 146727
+  },
+  "SCHOOL": {
+    "file": "videos/school.mp4",
+    "bytes": 256436
+  },
+  "TOMORROW": {
+    "file": "videos/tomorrow.mp4",
+    "bytes": 199053
+  },
+  "SAME": {
+    "file": "videos/same.mp4",
+    "bytes": 200686
+  },
+  "MONEY": {
+    "file": "videos/money.mp4",
+    "bytes": 252016
+  },
+  "NOW": {
+    "file": "videos/now.mp4",
+    "bytes": 282528
+  },
+  "DRINK": {
+    "file": "videos/drink.mp4",
+    "bytes": 197334
+  },
+  "WE": {
+    "file": "videos/we.mp4",
+    "bytes": 256917
+  },
   "WHAT": {
     "file": "videos/what.mp4",
     "bytes": 191879
+  },
+  "FINISH": {
+    "file": "videos/finish.mp4",
+    "bytes": 229485
   },
   "LIKE": {
     "file": "videos/like.mp4",
@@ -91,21 +335,85 @@
     "file": "videos/learn.mp4",
     "bytes": 294456
   },
+  "WAIT": {
+    "file": "videos/wait.mp4",
+    "bytes": 209129
+  },
+  "FATHER": {
+    "file": "videos/father.mp4",
+    "bytes": 285449
+  },
+  "PURPLE": {
+    "file": "videos/purple.mp4",
+    "bytes": 156897
+  },
+  "FAMILY": {
+    "file": "videos/family.mp4",
+    "bytes": 266854
+  },
+  "HARD": {
+    "file": "videos/hard.mp4",
+    "bytes": 295440
+  },
+  "THINK": {
+    "file": "videos/think.mp4",
+    "bytes": 171655
+  },
+  "REMEMBER": {
+    "file": "videos/remember.mp4",
+    "bytes": 207148
+  },
+  "FEEL": {
+    "file": "videos/feel.mp4",
+    "bytes": 230124
+  },
+  "TIME": {
+    "file": "videos/time.mp4",
+    "bytes": 235497
+  },
+  "MORE": {
+    "file": "videos/more.mp4",
+    "bytes": 251948
+  },
   "HEARING": {
     "file": "videos/hearing.mp4",
     "bytes": 254825
+  },
+  "COLD": {
+    "file": "videos/cold.mp4",
+    "bytes": 251717
   },
   "WHERE": {
     "file": "videos/where.mp4",
     "bytes": 181465
   },
+  "BROTHER": {
+    "file": "videos/brother.mp4",
+    "bytes": 353281
+  },
   "SAD": {
     "file": "videos/sad.mp4",
     "bytes": 314523
   },
+  "BLACK": {
+    "file": "videos/black.mp4",
+    "bytes": 295980
+  },
   "NAME": {
     "file": "videos/name.mp4",
     "bytes": 280164
+  },
+  "RED": {
+    "file": "videos/red.mp4",
+    "bytes": 155830
+  },
+  "FAST": {
+    "file": "videos/fast.mp4",
+    "bytes": 269656
+  },
+  "COME": {
+    "file": "videos/come.mp4",
+    "bytes": 121657
   },
   "WHO": {
     "file": "videos/who.mp4",
@@ -115,17 +423,61 @@
     "file": "videos/yes.mp4",
     "bytes": 140598
   },
+  "TODAY": {
+    "file": "videos/today.mp4",
+    "bytes": 264244
+  },
   "HELLO": {
     "file": "videos/hello.mp4",
     "bytes": 263054
+  },
+  "WORK": {
+    "file": "videos/work.mp4",
+    "bytes": 221542
   },
   "SIGN": {
     "file": "videos/sign.mp4",
     "bytes": 268413
   },
+  "HOT": {
+    "file": "videos/hot.mp4",
+    "bytes": 196877
+  },
+  "ANSWER": {
+    "file": "videos/answer.mp4",
+    "bytes": 277768
+  },
+  "SMALL": {
+    "file": "videos/small.mp4",
+    "bytes": 238728
+  },
   "LOVE": {
     "file": "videos/love.mp4",
     "bytes": 346403
+  },
+  "SICK": {
+    "file": "videos/sick.mp4",
+    "bytes": 240593
+  },
+  "IT": {
+    "file": "videos/it.mp4",
+    "bytes": 282758
+  },
+  "YELLOW": {
+    "file": "videos/yellow.mp4",
+    "bytes": 107438
+  },
+  "STOP": {
+    "file": "videos/stop.mp4",
+    "bytes": 285394
+  },
+  "TRY": {
+    "file": "videos/try.mp4",
+    "bytes": 223850
+  },
+  "WRONG": {
+    "file": "videos/wrong.mp4",
+    "bytes": 249049
   },
   "NO": {
     "file": "videos/no.mp4",
