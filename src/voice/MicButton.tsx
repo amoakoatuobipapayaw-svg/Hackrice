@@ -48,13 +48,18 @@ export function MicButton({ isListening, isTranscribing, startListening, stopLis
     function onRelease() {
       void handlePressEnd();
     }
+    function onKeyRelease(e: KeyboardEvent) {
+      if (e.key === " " || e.key === "Enter") void handlePressEnd();
+    }
     window.addEventListener("mouseup", onRelease);
     window.addEventListener("touchend", onRelease);
     window.addEventListener("touchcancel", onRelease);
+    window.addEventListener("keyup", onKeyRelease);
     return () => {
       window.removeEventListener("mouseup", onRelease);
       window.removeEventListener("touchend", onRelease);
       window.removeEventListener("touchcancel", onRelease);
+      window.removeEventListener("keyup", onKeyRelease);
     };
   }, [handlePressEnd]);
 
@@ -68,6 +73,15 @@ export function MicButton({ isListening, isTranscribing, startListening, stopLis
         onTouchStart={(e) => {
           e.preventDefault();
           handlePressStart();
+        }}
+        onKeyDown={(e) => {
+          // Space/Enter press-and-hold — same start/stop split as mouse and
+          // touch, so keyboard and switch-access users can use this control
+          // at all. e.repeat guards the flood of keydowns while held.
+          if ((e.key === " " || e.key === "Enter") && !e.repeat) {
+            e.preventDefault();
+            handlePressStart();
+          }
         }}
         disabled={isTranscribing}
         aria-pressed={busy}
