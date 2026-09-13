@@ -4,6 +4,7 @@ import { Icon, type IconName } from '../components/ui/Icon';
 import { Logo } from '../components/ui/Logo';
 import { TtsToggle } from '../components/ui/TtsToggle';
 import { GoogleSignInButton } from './GoogleSignInButton';
+import { VerifyBadge } from './VerifyBadge';
 
 const LINKS: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/', label: 'Learn', icon: 'home' },
@@ -19,9 +20,9 @@ export function Nav() {
     <div className="flex h-full flex-col p-3 lg:p-4">
       <div className="flex items-center justify-between lg:block">
         <NavLink to="/" className="inline-flex rounded-xl px-2 py-3 lg:mb-0 lg:py-4" aria-label="Home"><Logo /></NavLink>
-        <div className="flex items-center gap-1 lg:hidden"><GoogleSignInButton compact /><TtsToggle /><HighContrastToggle /></div>
+        <div className="flex items-center gap-1 lg:hidden"><GoogleSignInButton compact /><VerifyBadge compact /><TtsToggle /><HighContrastToggle /></div>
       </div>
-      <div className="hidden lg:mb-6 lg:block"><GoogleSignInButton /></div>
+      <div className="hidden lg:mb-6 lg:block lg:space-y-2"><GoogleSignInButton /><VerifyBadge /></div>
       <nav aria-label="Main navigation" className="grid grid-cols-6 gap-1 lg:flex lg:flex-col lg:gap-1.5">
         {LINKS.map(({to,label,icon}) => <NavLink key={to} to={to} end={to === '/'} className={({isActive}) => `flex min-w-0 flex-col items-center gap-1 rounded-xl border-2 px-1 py-2 text-[10px] font-extrabold tracking-wide uppercase transition-colors lg:flex-row lg:gap-3 lg:px-3.5 lg:py-3 lg:text-sm ${isActive ? 'border-selected-line bg-selected text-selected-ink' : 'border-transparent text-muted hover:bg-soft hover:text-ink'}`}><Icon name={icon} size={22} className="lg:w-6" /><span className="truncate">{label}</span></NavLink>)}
       </nav>

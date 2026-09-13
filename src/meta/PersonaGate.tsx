@@ -1,30 +1,8 @@
 import { Button } from "../components/ui/Button";
-
-// Sandbox-only "are you a real human" check, gating the public leaderboard.
-// Loads Persona's embedded client from their CDN on demand — no bundled SDK,
-// no auth system, just a one-time flag flip. Requires VITE_PERSONA_TEMPLATE_ID.
-declare global {
-  interface Window {
-    Persona?: { Client: new (opts: Record<string, unknown>) => { open(): void } };
-  }
-}
-
-const SDK_URL = "https://cdn.withpersona.com/dist/persona-v4.11.0.js";
-const templateId = import.meta.env.VITE_PERSONA_TEMPLATE_ID;
-
-async function loadSdk(): Promise<void> {
-  if (window.Persona) return;
-  await new Promise<void>((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = SDK_URL;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Persona SDK"));
-    document.head.appendChild(script);
-  });
-}
+import { openPersonaVerification, personaTemplateId } from "./personaVerify";
 
 export function PersonaGate({ onVerified }: { onVerified: () => void }) {
-  if (!templateId) {
+  if (!personaTemplateId) {
     return (
       <p className="text-sm text-ink">
         Persona sandbox not configured (missing VITE_PERSONA_TEMPLATE_ID).
@@ -32,14 +10,13 @@ export function PersonaGate({ onVerified }: { onVerified: () => void }) {
     );
   }
 
-  async function verify() {
-    await loadSdk();
-    new window.Persona!.Client({
-      templateId,
-      environment: "sandbox",
-      onComplete: () => onVerified(),
-    }).open();
-  }
-
-  return <Button onClick={verify}>Verify to join the leaderboard</Button>;
+  return (
+    <div className="space-y-2">
+      <Button onClick={() => openPersonaVerification(onVerified)}>Verify to join the leaderboard</Button>
+      <p className="text-xs leading-relaxed text-muted">
+        This is a sandbox integration: no real text message is sent. Enter any phone number, then
+        any 4-digit code on the next screen — that's what completes verification here.
+      </p>
+    </div>
+  );
 }
