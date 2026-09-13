@@ -17,11 +17,11 @@ const ALL_NUMBERS = ['0','1','2','3','4','5','6','7','8','9'] as const;
 // motionClassifier.ts's heuristic geometry has no live-camera validation either.
 export const CONFIRM_THRESHOLD = 0.8;
 export const CONFIDENCE_CAP: Record<string, number> = {
-  I: 0.98, Y: 0.98, L: 0.98, V: 0.98, W: 0.98, J: 0.98, Z: 0.98,
+  I: 0.98, Y: 0.98, L: 0.98, V: 0.98, W: 0.98, J: 0.98, Z: 0.98, A: 0.98, S: 0.98, T: 0.98, N: 0.98, M: 0.98,
   F: 0.65, B: 0.65, D: 0.65, K: 0.65, P: 0.65, H: 0.65, O: 0.65, U: 0.65,
-  Q: 0.6, G: 0.6, A: 0.6,
+  Q: 0.6, G: 0.6,
   R: 0.55, C: 0.55, X: 0.55,
-  E: 0.5, T: 0.5, N: 0.5, M: 0.5, S: 0.5,
+  E: 0.5,
   '1': 0.98, '2': 0.98, '3': 0.98, '4': 0.98, '5': 0.98,
   '6': 0.98, '7': 0.98, '8': 0.98, '9': 0.98, '0': 0.65,
 };
